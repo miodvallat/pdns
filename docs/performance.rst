@@ -122,7 +122,7 @@ defaults to 20 seconds.
 
 The default values should work fine for many sites. When tuning, keep in
 mind that the Query Cache mostly saves database access but that the
-Packet Cache also saves a lot of CPU because 0 internal processing is
+Packet Cache also saves a lot of CPU because zero internal processing is
 done when answering a question from the Packet Cache.
 
 Caches & Memory Allocations & glibc

@@ -321,6 +321,12 @@ security-status
 ^^^^^^^^^^^^^^^
 Security status based on :ref:`securitypolling`.
 
+.. _stat-send-latency:
+
+send-latency
+^^^^^^^^^^^^
+Average number of microseconds needed to send the answer
+
 .. _stat-servfail-packets:
 
 servfail-packets
@@ -404,12 +410,6 @@ Number of questions received over TCPv6
 timedout-packets
 ^^^^^^^^^^^^^^^^
 Amount of packets that were dropped because they had to wait too long internally
-
-.. _stat-send-latency:
-
-send-latency
-^^^^^^^^^^^^
-Average number of microseconds needed to send the answer
 
 .. _stat-udp-answers-bytes:
 

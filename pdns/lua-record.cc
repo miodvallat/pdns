@@ -75,6 +75,8 @@ private:
     std::atomic<bool> first{true};
     /* last time the status was accessed */
     std::atomic<time_t> lastAccess{0};
+    /* last time the status was modified */
+    std::atomic<time_t> lastStatusUpdate{0};
   };
 
 public:
@@ -177,20 +179,34 @@ private:
       std::chrono::system_clock::time_point checkStart = std::chrono::system_clock::now();
       std::vector<std::future<void>> results;
       std::vector<CheckDesc> toDelete;
+      time_t interval{g_luaHealthChecksInterval};
       {
         // make sure there's no insertion
         auto statuses = d_statuses.read_lock();
         for (auto& it: *statuses) {
           auto& desc = it.first;
           auto& state = it.second;
+          time_t specific_interval{0};
+          auto lastAccess = std::chrono::system_clock::from_time_t(state->lastAccess);
+
+          if (desc.opts.count("interval") != 0) {
+            specific_interval = std::atoi(desc.opts.at("interval").c_str());
+            if (specific_interval != 0 &&
+                checkStart < std::chrono::system_clock::from_time_t(state->lastStatusUpdate) + std::chrono::seconds(specific_interval)) {
+              continue; // too early
+            }
+          }
 
           if (desc.url.empty()) { // TCP
             results.push_back(std::async(std::launch::async, &IsUpOracle::checkTCP, this, desc, state->status.load(), state->first.load()));
           } else { // URL
             results.push_back(std::async(std::launch::async, &IsUpOracle::checkURL, this, desc, state->status.load(), state->first.load()));
           }
-          if (std::chrono::system_clock::from_time_t(state->lastAccess) < (checkStart - std::chrono::seconds(g_luaHealthChecksExpireDelay))) {
+          if (lastAccess < (checkStart - std::chrono::seconds(g_luaHealthChecksExpireDelay))) {
             toDelete.push_back(desc);
+          }
+          if (specific_interval != 0) {
+            interval = std::gcd(interval, specific_interval);
           }
         }
       }
@@ -208,7 +224,7 @@ private:
       // set thread name again, in case std::async surprised us by doing work in this thread
       setThreadName("pdns/luaupcheck");
 
-      std::this_thread::sleep_until(checkStart + std::chrono::seconds(g_luaHealthChecksInterval));
+      std::this_thread::sleep_until(checkStart + std::chrono::seconds(interval));
     }
   }
 
@@ -223,6 +239,7 @@ private:
     auto statuses = d_statuses.write_lock();
     auto& state = (*statuses)[cd];
     state->status = status;
+    state->lastStatusUpdate = time(nullptr);
     if (state->first) {
       state->first = false;
     }

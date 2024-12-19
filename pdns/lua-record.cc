@@ -71,8 +71,10 @@ private:
     CheckState(time_t _lastAccess): lastAccess(_lastAccess) {}
     /* current status */
     std::atomic<bool> status{false};
-    /* first check ? */
+    /* first check? */
     std::atomic<bool> first{true};
+    /* number of successive checks returning failure */
+    std::atomic<unsigned int> failures{0};
     /* last time the status was accessed */
     std::atomic<time_t> lastAccess{0};
     /* last time the status was modified */
@@ -90,7 +92,7 @@ public:
   bool isUp(const CheckDesc& cd);
 
 private:
-  void checkURL(const CheckDesc& cd, const bool status, const bool first = false)
+  void checkURL(const CheckDesc& cd, const bool status, const bool first)
   {
     setThreadName("pdns/lua-c-url");
 
@@ -141,7 +143,7 @@ private:
       setDown(cd);
     }
   }
-  void checkTCP(const CheckDesc& cd, const bool status, const bool first = false) {
+  void checkTCP(const CheckDesc& cd, const bool status, const bool first) {
     setThreadName("pdns/lua-c-tcp");
     try {
       int timeout = 2;
@@ -191,7 +193,7 @@ private:
 
           if (desc.opts.count("interval") != 0) {
             specific_interval = std::atoi(desc.opts.at("interval").c_str());
-            if (specific_interval != 0 &&
+            if (specific_interval != 0 && not state->first &&
                 checkStart < std::chrono::system_clock::from_time_t(state->lastStatusUpdate) + std::chrono::seconds(specific_interval)) {
               continue; // too early
             }
@@ -202,7 +204,11 @@ private:
           } else { // URL
             results.push_back(std::async(std::launch::async, &IsUpOracle::checkURL, this, desc, state->status.load(), state->first.load()));
           }
-          if (lastAccess < (checkStart - std::chrono::seconds(g_luaHealthChecksExpireDelay))) {
+          // Give it a chance to run at least once.
+          // If minimumFailures * interval > lua-health-checks-expire-delay, then a down status will never get reported.
+          // This is unlikely to be a problem in practice due to the default value of the expire delay being one hour.
+          if (not state->first &&
+              lastAccess < (checkStart - std::chrono::seconds(g_luaHealthChecksExpireDelay))) {
             toDelete.push_back(desc);
           }
           if (specific_interval != 0) {
@@ -238,10 +244,23 @@ private:
   {
     auto statuses = d_statuses.write_lock();
     auto& state = (*statuses)[cd];
-    state->status = status;
     state->lastStatusUpdate = time(nullptr);
-    if (state->first) {
-      state->first = false;
+    state->first = false;
+    if (state->status != status) {
+      if (status) {
+        state->failures = 0;
+        state->status = true;
+      } else {
+        unsigned int minimumFailures = 1;
+        if (cd.opts.count("minimumFailures") != 0) {
+          unsigned int value = std::atoi(cd.opts.at("minimumFailures").c_str());
+          if (value != 0)
+            minimumFailures = std::max(minimumFailures, value);
+        }
+        // Only perform an up -> down transition if the minimumFailures threshold has been hit.
+        if (++state->failures >= minimumFailures)
+          state->status = false;
+      }
     }
   }
 

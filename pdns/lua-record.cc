@@ -92,7 +92,7 @@ public:
   bool isUp(const CheckDesc& cd);
 
 private:
-  void checkURL(const CheckDesc& cd, const bool status, const bool first)
+  void checkURL(const CheckDesc& cd, const bool status, const bool first) // NOLINT(readability-identifier-length)
   {
     setThreadName("pdns/lua-c-url");
 
@@ -143,7 +143,7 @@ private:
       setDown(cd);
     }
   }
-  void checkTCP(const CheckDesc& cd, const bool status, const bool first) {
+  void checkTCP(const CheckDesc& cd, const bool status, const bool first) { // NOLINT(readability-identifier-length)
     setThreadName("pdns/lua-c-tcp");
     try {
       int timeout = 2;
@@ -254,12 +254,14 @@ private:
         unsigned int minimumFailures = 1;
         if (cd.opts.count("minimumFailures") != 0) {
           unsigned int value = std::atoi(cd.opts.at("minimumFailures").c_str());
-          if (value != 0)
+          if (value != 0) {
             minimumFailures = std::max(minimumFailures, value);
+          }
         }
         // Only perform an up -> down transition if the minimumFailures threshold has been hit.
-        if (++state->failures >= minimumFailures)
+        if (++state->failures >= minimumFailures) {
           state->status = false;
+        }
       }
     }
   }

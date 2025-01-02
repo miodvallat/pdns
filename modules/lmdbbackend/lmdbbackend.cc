@@ -2668,8 +2668,38 @@ bool LMDBBackend::getTSIGKeys(std::vector<struct TSIGKey>& keys)
   auto txn = d_ttsig->getROTransaction();
 
   keys.clear();
-  for (auto iter = txn.begin(); iter != txn.end(); ++iter) {
-    keys.push_back(*iter);
+  // In a perfect world, we would simply iterate over txn and add every
+  // item to the returned vector:
+  //   for (auto iter = txn.begin(); iter != txn.end(); ++iter) {
+  //     keys.push_back(*iter);
+  //   }
+  // But databases converted from older (< 5) schemas _may_ have multiple
+  // entries for the same TSIG key name and algorithm, something which is not
+  // allowed in the v5 database schema. These extra entries will not be found
+  // by get_multi<> during regular operations, and would only appear in the
+  // results of this method.
+  // In order to prevent this, we first only gather the list of key names, and
+  // in a second step, query for them using a similar logic as getTSIGKey().
+  // Unfortunately, there does not seem to be a way to know if the database had
+  // been created using the v5 schema (not converted), in which case we could
+  // use the above, simpler logic.
+  std::vector<std::string> keynames;
+  for (const auto& iter : txn) {
+    const auto name = iter.name.toString();
+    if (std::find(keynames.begin(), keynames.end(), name) == keynames.end()) {
+      keynames.push_back(name);
+    }
+  }
+  for (const auto& iter : keynames) {
+    DNSName name(iter);
+    LmdbIdVec ids;
+    txn.get_multi<0>(name, ids);
+    for (auto key_id : ids) {
+      TSIGKey key;
+      if (txn.get(key_id, key)) {
+        keys.push_back(key);
+      }
+    }
   }
   return true;
 }

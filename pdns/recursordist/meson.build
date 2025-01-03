@@ -103,7 +103,6 @@ common_sources += files(
   src_dir / 'dnswriter.cc',
   src_dir / 'ednsextendederror.cc',
   src_dir / 'ednsoptions.cc',
-  src_dir / 'ednspadding.cc',
   src_dir / 'ednssubnet.cc',
   src_dir / 'filterpo.cc',
   src_dir / 'gettime.cc',

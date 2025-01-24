@@ -546,10 +546,20 @@ void PacketHandler::doAdditionalProcessing(DNSPacket& p, std::unique_ptr<DNSPack
           }
           break;
         }
+        case QType::NAPTR: {
+          auto naptrContent = getRR<NAPTRRecordContent>(rr.dr);
+          auto flags = naptrContent->getFlags();
+          toLowerInPlace(flags);
+          if (flags.find('a') != string::npos || flags.find('s') != string::npos) {
+            content = naptrContent->getReplacement();
+            DLOG(g_log<<Logger::Debug<<"adding NAPTR replacement="<<content<<endl);
+          }
+          break;
+        }
         default:
           continue;
       }
-      if(content.isPartOf(d_sd.qname)) {
+      if(!content.empty() && content.isPartOf(d_sd.qname)) {
         lookup.emplace(content);
       }
     }

@@ -7,6 +7,14 @@
 
 const bool TCPIOHandler::s_disableConnectForUnitTests = false;
 
+#ifdef HAVE_LIBSODIUM
+#include <sodium.h>
+#endif /* HAVE_LIBSODIUM */
+
+TLSCtx::tickets_key_added_hook TLSCtx::s_ticketsKeyAddedHook{nullptr};
+
+#if defined(HAVE_DNS_OVER_TLS) || defined(HAVE_DNS_OVER_HTTPS) // {
+
 namespace {
 bool shouldDoVerboseLogging()
 {
@@ -19,12 +27,6 @@ bool shouldDoVerboseLogging()
 #endif
 }
 }
-
-#ifdef HAVE_LIBSODIUM
-#include <sodium.h>
-#endif /* HAVE_LIBSODIUM */
-
-TLSCtx::tickets_key_added_hook TLSCtx::s_ticketsKeyAddedHook{nullptr};
 
 static std::vector<std::vector<uint8_t>> getALPNVector(TLSFrontend::ALPN alpn, bool client)
 {
@@ -46,7 +48,6 @@ static std::vector<std::vector<uint8_t>> getALPNVector(TLSFrontend::ALPN alpn, b
   return {};
 }
 
-#if defined(HAVE_DNS_OVER_TLS) || defined(HAVE_DNS_OVER_HTTPS)
 #ifdef HAVE_LIBSSL
 
 #include <openssl/conf.h>
@@ -1877,7 +1878,7 @@ private:
 
 #endif /* HAVE_GNUTLS */
 
-#endif /* HAVE_DNS_OVER_TLS || HAVE_DNS_OVER_HTTPS */
+#endif /* HAVE_DNS_OVER_TLS || HAVE_DNS_OVER_HTTPS */ // }
 
 bool TLSFrontend::setupTLS()
 {

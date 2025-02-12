@@ -4447,182 +4447,246 @@ struct commandDispatcher {
 // clang-format off
 static const std::unordered_map<std::string, commandDispatcher> commands{
   {"activate-tsig-key", {true, activateTSIGKey, GROUP_TSIGKEY,
-   "activate-tsig-key ZONE NAME {primary|secondary|producer|consumer}\n"
-   "                                   Enable TSIG authenticated AXFR using the key NAME for ZONE"}},
+   "activate-tsig-key ZONE NAME {primary|secondary|producer|consumer}\n\t"
+   "Enable TSIG authenticated AXFR using the key NAME for ZONE"}},
   {"activate-zone-key", {true, activateZoneKey, GROUP_ZONEKEY,
-   "activate-zone-key ZONE KEY-ID      Activate the key with key id KEY-ID in ZONE"}},
+   "activate-zone-key ZONE KEY-ID\n\t"
+   "Activate the key with key id KEY-ID in ZONE"}},
   {"add-autoprimary", {true, addAutoprimary, GROUP_AUTOPRIMARY,
-   "add-autoprimary IP NAMESERVER [account]\n"
-   "                                   Add a new autoprimary "}},
+   "add-autoprimary IP NAMESERVER [account]\n\t"
+   "Add a new autoprimary "}},
   {"add-meta", {true, setMeta, GROUP_META,
-   "add-meta ZONE KIND VALUE           Add zone metadata, this adds to the existing KIND\n"
-   "                   [VALUE ...]"}},
+   "add-meta ZONE KIND VALUE [VALUE...]\n\t"
+   "Add zone metadata, this adds to the existing KIND"}},
   {"add-record", {true, addRecord, GROUP_ZONE,
-   "add-record ZONE NAME TYPE [ttl] content\n"
-   "             [content..]           Add one or more records to ZONE"}},
+   "add-record ZONE NAME TYPE [ttl] content [content...]\n\t"
+   "Add one or more records to ZONE"}},
   {"add-zone-key", {true, addZoneKey, GROUP_ZONEKEY,
    "add-zone-key ZONE {zsk|ksk} [BITS] [active|inactive] [published|unpublished]\n"
-   "             [rsasha1|rsasha1-nsec3-sha1|rsasha256|rsasha512|ecdsa256|ecdsa384"
+   "    [rsasha1|rsasha1-nsec3-sha1|rsasha256|rsasha512|ecdsa256|ecdsa384"
 #if defined(HAVE_LIBSODIUM) || defined(HAVE_LIBCRYPTO_ED25519)
-   "|ed25519"
+        "|ed25519"
 #endif
 #if defined(HAVE_LIBCRYPTO_ED448)
-   "|ed448"
+        "|ed448"
 #endif
-   "]\n"
-   "                                   Add a ZSK or KSK to zone and specify algo&bits"}},
+        "]\n\t"
+   "Add a ZSK or KSK to zone with specific algorithm and size in bits"}},
   {"b2b-migrate", {true, B2BMigrate, GROUP_OTHER,
-   "b2b-migrate OLD NEW                Move all data from one backend to another"}},
+   "b2b-migrate OLD NEW\n\t"
+   "Move all data from one backend to another"}},
   {"backend-cmd", {true, backendCmd, GROUP_OTHER,
-   "backend-cmd BACKEND CMD [CMD..]    Perform one or more backend commands"}},
+   "backend-cmd BACKEND CMD [CMD...]\n\t"
+   "Perform one or more backend commands"}},
   {"backend-lookup", {true, backendLookup, GROUP_OTHER,
-   "backend-lookup BACKEND NAME [[TYPE] CLIENT-IP-SUBNET]\n"
-   "                                   Perform a backend lookup of NAME, TYPE and CLIENT-IP-SUBNET"}},
+   "backend-lookup BACKEND NAME [[TYPE] CLIENT-IP-SUBNET]\n\t"
+   "Perform a backend lookup of NAME, TYPE (defaulting to ANY) and\n\t"
+   "CLIENT-IP-SUBNET"}},
   {"bench-db", {true, benchDb, GROUP_OTHER,
-   "bench-db [filename]                Bench database backend with queries, one zone per line"}},
+   "bench-db [filename]\n\t"
+   "Benchmark database backend with queries, one zone per line"}},
   {"change-secondary-zone-primary", {true, changeSecondaryZonePrimary, GROUP_ZONE,
-   "change-secondary-zone-primary ZONE primary-ip [primary-ip..]\n"
-   "                                   Change secondary zone ZONE primary IP address to primary-ip"}},
+   "change-secondary-zone-primary ZONE primary-ip [primary-ip...]\n\t"
+   "Change secondary zone ZONE primary IP address(es) to primary-ip"}},
   {"check-all-zones", {true, checkAllZones, GROUP_ZONE,
-   "check-all-zones [exit-on-error]    Check all zones for correctness. Set exit-on-error to exit immediately\n"
-   "                                   after finding an error in a zone."}},
+   "check-all-zones [exit-on-error]\n\t"
+   "Check all zones for correctness. Use exit-on-error to exit immediately\n\t"
+   "upon finding the first error in any zone"}},
   {"check-zone", {true, checkZone, GROUP_ZONE,
-   "check-zone ZONE                    Check a zone for correctness"}},
+   "check-zone ZONE\n\t"
+   "Check a zone for correctness"}},
   {"clear-zone", {true, clearZone, GROUP_ZONE,
-   "clear-zone ZONE                    Clear all records of a zone, but keep everything else"}},
+   "clear-zone ZONE\n\t"
+   "Clear all records of a zone, but keep everything else"}},
   {"create-bind-db", {true, createBindDb, GROUP_DNSSEC,
-   "create-bind-db FNAME               Create DNSSEC db for BIND backend (bind-dnssec-db)"}},
+   "create-bind-db FNAME\n\t"
+   "Create DNSSEC db for BIND backend (bind-dnssec-db)"}},
   {"create-secondary-zone", {true, createSecondaryZone, GROUP_ZONE,
-   "create-secondary-zone ZONE primary-ip [primary-ip..]\n"
-   "                                   Create secondary zone ZONE with primary IP address primary-ip"}},
+   "create-secondary-zone ZONE primary-ip [primary-ip...]\n\t"
+   "Create secondary zone ZONE with primary IP address(es) primary-ip"}},
   {"create-zone", {true, createZone, GROUP_ZONE,
-   "create-zone ZONE [nsname]          Create empty zone ZONE"}},
+   "create-zone ZONE [nsname]\n\t"
+   "Create empty zone ZONE"}},
   {"deactivate-tsig-key", {true, deactivateTSIGKey, GROUP_TSIGKEY,
-   "deactivate-tsig-key ZONE NAME {primary|secondary}\n"
-   "                                   Disable TSIG authenticated AXFR using the key NAME for ZONE"}},
+   "deactivate-tsig-key ZONE NAME {primary|secondary}\n\t"
+   "Disable TSIG authenticated AXFR using the key NAME for ZONE"}},
   {"deactivate-zone-key", {true, deactivateZoneKey, GROUP_ZONEKEY,
-   "deactivate-zone-key ZONE KEY-ID    Deactivate the key with key id KEY-ID in ZONE"}},
+   "deactivate-zone-key ZONE KEY-ID\n\t"
+   "Deactivate the key with key id KEY-ID in ZONE"}},
   {"delete-rrset", {true, deleteRRSet, GROUP_RRSET,
-   "delete-rrset ZONE NAME TYPE        Delete named RRSET from zone"}},
+   "delete-rrset ZONE NAME TYPE\n\t"
+   "Delete named RRSET from zone"}},
   {"delete-tsig-key", {true, deleteTSIGKey, GROUP_TSIGKEY,
-   "delete-tsig-key NAME               Delete TSIG key (warning! will not unmap key!)"}},
+   "delete-tsig-key NAME\n\t"
+   "Delete TSIG key (warning: will not unmap key!)"}},
   {"delete-zone", {true, deleteZone, GROUP_ZONE,
-   "delete-zone ZONE                   Delete the zone"}},
+   "delete-zone ZONE\n\t"
+   "Delete zone ZONE"}},
   {"disable-dnssec", {true, disableDNSSEC, GROUP_DNSSEC,
-   "disable-dnssec ZONE                Deactivate all keys and unset PRESIGNED in ZONE"}},
+   "disable-dnssec ZONE\n\t"
+   "Deactivate all keys and unset PRESIGNED in ZONE"}},
   {"edit-zone", {true, editZone, GROUP_ZONE,
-   "edit-zone ZONE                     Edit zone contents using $EDITOR"}},
+   "edit-zone ZONE\n\t"
+   "Edit zone contents using $EDITOR"}},
   {"export-zone-dnskey", {true, expotZoneDNSKey, GROUP_CDNSKEY,
-   "export-zone-dnskey ZONE KEY-ID     Export to stdout the public DNSKEY described"}},
+   "export-zone-dnskey ZONE KEY-ID\n\t"
+   "Export the public DNSKEY with the given ID to stdout"}},
   {"export-zone-ds", {true, exportZoneDS, GROUP_CDNSKEY,
-   "export-zone-ds ZONE                Export to stdout all KSK DS records for ZONE"}},
+   "export-zone-ds ZONE\n\t"
+   "Export all KSK DS records for ZONE to stdout"}},
   {"export-zone-key", {true, exportZoneKey, GROUP_ZONEKEY,
-   "export-zone-key ZONE KEY-ID        Export to stdout the private key described"}},
+   "export-zone-key ZONE KEY-ID\n\t"
+   "Export the private key with the given ID to stdout"}},
   {"export-zone-key-pem", {true, exportZoneKeyPEM, GROUP_ZONEKEY,
-   "export-zone-key-pem ZONE KEY-ID    Export to stdout in PEM the private key described"}},
+   "export-zone-key-pem ZONE KEY-ID\n\t"
+   "Export in PEM format the private key with the given ID to stdout"}},
   {"generate-tsig-key", {true, generateTSIGKey, GROUP_TSIGKEY,
-   "generate-tsig-key NAME ALGORITHM   Generate new TSIG key"}},
+   "generate-tsig-key NAME ALGORITHM\n\t"
+   "Generate new TSIG key"}},
   {"generate-zone-key", {true, generateZoneKey, GROUP_ZONEKEY,
-   "generate-zone-key {zsk|ksk} [ALGORITHM] [BITS]\n"
-   "                                   Generate a ZSK or KSK to stdout with specified ALGORITHM and BITS"}},
+   "generate-zone-key {zsk|ksk} [ALGORITHM] [BITS]\n\t"
+   "Generate a ZSK or KSK to stdout with specified ALGORITHM and BITS"}},
   {"get-meta", {true, getMeta, GROUP_META,
-   "get-meta ZONE [KIND ...]           Get zone metadata. If no KIND given, lists all known"}},
+   "get-meta ZONE [KIND...]\n\t"
+   "Get zone metadata. If no KIND given, lists all known"}},
   {"hash-password", {true, hashPassword, GROUP_OTHER,
-   "hash-password [WORK FACTOR]        Ask for a plaintext password or api key and output a hashed and salted version"}},
+   "hash-password [WORK FACTOR]\n\t"
+   "Ask for a plaintext password or API key and output a salted and hashed\n\t"
+   "version"}},
   {"hash-zone-record", {true, hashZoneRecord, GROUP_NSEC3,
-   "hash-zone-record ZONE RNAME        Calculate the NSEC3 hash for RNAME in ZONE"}},
+   "hash-zone-record ZONE RNAME\n\t"
+   "Calculate the NSEC3 hash for RNAME in ZONE"}},
   {"hsm", {true, HSM, GROUP_OTHER,
 #ifdef HAVE_P11KIT1
-   "hsm assign ZONE ALGORITHM {ksk|zsk} MODULE SLOT PIN LABEL\n"
-   "                                   Assign a hardware signing module to a ZONE\n"
-   "hsm create-key ZONE KEY-ID [BITS]  Create a key using hardware signing module for ZONE (use assign first)\n"
-   "                                   BITS defaults to 2048"
+   "hsm assign ZONE ALGORITHM {ksk|zsk} MODULE SLOT PIN LABEL\n\t"
+   "Assign a hardware signing module to a ZONE\n"
+   "hsm create-key ZONE KEY-ID [BITS]\n\t"
+   "Create a key using hardware signing module for ZONE (use assign first);\n\t"
+   "BITS defaults to 2048"
 #else
    ""
 #endif
    }},
   {"import-tsig-key", {true, importTSIGKey, GROUP_TSIGKEY,
-   "import-tsig-key NAME ALGORITHM KEY Import TSIG key"}},
+   "import-tsig-key NAME ALGORITHM KEY\n\t"
+   "Import TSIG key"}},
   {"import-zone-key", {true, importZoneKey, GROUP_ZONEKEY,
-   "import-zone-key ZONE FILE          Import from a file a private key, ZSK or KSK\n"
-   "       [active|inactive] [ksk|zsk] [published|unpublished] Defaults to KSK, active and published"}},
+   "import-zone-key ZONE FILE [active|inactive] [ksk|zsk] [published|unpublished]\n\t"
+   "Import from a file a private key, ZSK or KSK; defaults to KSK, active\n\t"
+   "and published"}},
   {"import-zone-key-pem", {true, importZoneKeyPEM, GROUP_ZONEKEY,
-   "import-zone-key-pem ZONE FILE      Import a private key from a PEM file\n"
-   "        ALGORITHM {ksk|zsk}"}},
+   "import-zone-key-pem ZONE FILE ALGORITHM {ksk|zsk}\n\t"
+   "Import a private key from a PEM file\n"}},
   {"increase-serial", {true, increaseSerial, GROUP_ZONE,
-   "increase-serial ZONE               Increases the SOA-serial by 1. Uses SOA-EDIT"}},
+   "increase-serial ZONE\n\t"
+   "Increases the SOA-serial by 1. Uses SOA-EDIT"}},
   {"ipdecrypt", {false, ipEncrypt, GROUP_OTHER,
-   "ipdecrypt IP passphrase/key [key]  Decrypt IP address using passphrase or base64 key"}},
+   "ipdecrypt IP passphrase/key [key]\n\t"
+   "Decrypt IP address using passphrase or base64 key"}},
   {"ipencrypt", {false, ipEncrypt, GROUP_OTHER,
-   "ipencrypt IP passphrase/key [key]  Encrypt IP address using passphrase or base64 key"}},
+   "ipencrypt IP passphrase/key [key]\n\t"
+   "Encrypt IP address using passphrase or base64 key"}},
   {"list-algorithms", {false, listAlgorithms, GROUP_DNSSEC,
-   "list-algorithms [with-backend]     List all DNSSEC algorithms supported, optionally also listing the crypto library used"}},
+   "list-algorithms [with-backend]\n\t"
+   "List all DNSSEC algorithms supported, optionally also listing the\n\t"
+   "cryptographic library used"}},
   {"list-all-zones", {true, listAllZones, GROUP_ZONE,
-   "list-all-zones [primary|secondary|native|producer|consumer]\n"
-   "                                   List all active zone names. --verbose or -v will also include disabled or empty zones"}},
+   "list-all-zones [primary|secondary|native|producer|consumer]\n\t"
+   "List all active zone names. --verbose or -v will also include disabled\n\t"
+   "or empty zones"}},
   {"list-autoprimaries", {true, listAutoprimaries, GROUP_AUTOPRIMARY,
-   "list-autoprimaries                 List all autoprimaries"}},
+   "list-autoprimaries\n\t"
+   "List all autoprimaries"}},
   {"list-keys", {true, listKeys, GROUP_DNSSEC,
-   "list-keys [ZONE]                   List DNSSEC keys for ZONE. When ZONE is unset, display all keys for all active zones"}},
+   "list-keys [ZONE]\n\t"
+   "List DNSSEC keys for ZONE. When ZONE is unset, display all keys\n\t"
+   "for all active zones"}},
   {"list-member-zones", {true, listMemberZones, GROUP_ZONE,
-   "list-member-zones CATALOG          List all members of catalog zone CATALOG"}},
+   "list-member-zones CATALOG\n\t"
+   "List all members of catalog zone CATALOG"}},
   {"list-tsig-keys", {true, listTSIGKeys, GROUP_TSIGKEY,
-   "list-tsig-keys                     List all TSIG keys"}},
+   "list-tsig-keys\n\t"
+   "List all TSIG keys"}},
   {"list-zone", {true, listZone, GROUP_ZONE,
-   "list-zone ZONE                     List zone contents"}},
+   "list-zone ZONE\n\t"
+   "List zone contents"}},
   {"lmdb-get-backend-version", {false, lmdbGetBackendVersion, GROUP_OTHER,
-   "lmdb-get-backend-version           Get schema version supported by backend"}},
+   "lmdb-get-backend-version\n\t"
+   "Get schema version supported by backend"}},
   {"load-zone", {true, loadZone, GROUP_ZONE,
-   "load-zone ZONE FILE                Load ZONE from FILE, possibly creating zone or atomically\n"
-   "                                   replacing contents\n"
-   "                                   --verbose or -v will also include the keys for disabled or empty zones"}},
+   "load-zone ZONE FILE\n\t"
+   "Load ZONE from FILE, possibly creating zone or atomically replacing\n\t"
+   "contents; --verbose or -v will also include the keys for disabled or\n\t"
+   "empty zones"}},
   {"publish-zone-key", {true, publishZoneKey, GROUP_ZONEKEY,
-   "publish-zone-key ZONE KEY-ID       Publish the zone key with key id KEY-ID in ZONE"}},
+   "publish-zone-key ZONE KEY-ID\n\t"
+   "Publish the zone key with key id KEY-ID in ZONE"}},
   {"raw-lua-from-content", {true, rawLuaFromContent, GROUP_OTHER,
-   "raw-lua-from-content TYPE CONTENT  Display record contents in a form suitable for dnsdist's `SpoofRawAction`"}},
+   "raw-lua-from-content TYPE CONTENT\n\t"
+   "Display record contents in a form suitable for dnsdist's\n\t"
+   "`SpoofRawAction`"}},
   {"rectify-all-zones", {true, rectifyAllZones, GROUP_DNSSEC,
-   "rectify-all-zones [quiet]          Rectify all zones. Optionally quiet output with errors only"}},
+   "rectify-all-zones [quiet]\n\t"
+   "Rectify all zones. Optionally quiet output with errors only"}},
   {"rectify-zone", {true, rectifyZone, GROUP_DNSSEC,
-   "rectify-zone ZONE [ZONE ..]        Fix up DNSSEC fields (order, auth)"}},
+   "rectify-zone ZONE [ZONE...]\n\t"
+   "Fix up DNSSEC fields (order, auth)"}},
   {"remove-autoprimary", {true, removeAutoprimary, GROUP_AUTOPRIMARY,
-   "remove-autoprimary IP NAMESERVER   Remove an autoprimary"}},
+   "remove-autoprimary IP NAMESERVER\n\t"
+   "Remove an autoprimary"}},
   {"remove-zone-key", {true, removeZoneKey, GROUP_ZONEKEY,
-   "remove-zone-key ZONE KEY-ID        Remove key with KEY-ID from ZONE"}},
+   "remove-zone-key ZONE KEY-ID\n\t"
+   "Remove key with KEY-ID from ZONE"}},
   {"replace-rrset", {true, replaceRRSet, GROUP_RRSET,
-   "replace-rrset ZONE NAME TYPE [ttl] Replace named RRSET from zone\n"
-   "       content [content..]"}},
+   "replace-rrset ZONE NAME TYPE [ttl] content [content...]\n\t"
+   "Replace named RRSET from zone"}},
   {"secure-all-zones", {true, secureAllZones, GROUP_DNSSEC,
-   "secure-all-zones [increase-serial] Secure all zones without keys"}},
+   "secure-all-zones [increase-serial]\n\t"
+   "Secure all zones without keys"}},
   {"secure-zone", {true, secureZone, GROUP_DNSSEC,
-   "secure-zone ZONE [ZONE ..]         Add DNSSEC to zone ZONE"}},
+   "secure-zone ZONE [ZONE...]\n\t"
+   "Add DNSSEC to zone ZONE"}},
   {"set-account", {true, setAccount, GROUP_ZONE,
-   "set-account ZONE ACCOUNT           Change the account (owner) of ZONE to ACCOUNT"}},
+   "set-account ZONE ACCOUNT\n\t"
+   "Change the account (owner) of ZONE to ACCOUNT"}},
   {"set-catalog", {true, setCatalog, GROUP_CATALOG,
-   "set-catalog ZONE CATALOG           Change the catalog of ZONE to CATALOG. Setting CATALOG to an empty "" removes ZONE from the catalog it is in"}},
+   "set-catalog ZONE CATALOG\n\t"
+   "Change the catalog of ZONE to CATALOG. Setting CATALOG to an empty\n\t"
+   "value (\"\") removes ZONE from the catalog it is in"}},
   {"set-kind", {true, setKind, GROUP_ZONE,
-   "set-kind ZONE KIND                 Change the kind of ZONE to KIND (primary, secondary, native, producer, consumer)"}},
+   "set-kind ZONE KIND\n\t"
+   "Change the kind of ZONE to KIND (primary, secondary, native, producer,\n\t"
+   "consumer)"}},
   {"set-meta", {true, setMeta, GROUP_META,
-   "set-meta ZONE KIND [VALUE] [VALUE] Set zone metadata, optionally providing a value. *No* value clears meta\n"
-   "                                   Note - this will replace all metadata records of KIND!"}},
+   "set-meta ZONE KIND METADATANAME [VALUE]\n\t"
+   "Set zone metadata, optionally providing a value. A missing value clears\n\t"
+   "the metadata.\n\t"
+   "Note - this will replace all metadata records of KIND!"}},
   {"set-nsec3", {true, setNsec3, GROUP_NSEC3,
-   "set-nsec3 ZONE ['PARAMS' [narrow]] Enable NSEC3 with PARAMS. Optionally narrow"}},
+   "set-nsec3 ZONE ['PARAMS' [narrow]]\n\t"
+   "Enable NSEC3 with PARAMS. Optionally narrow"}},
   {"set-option", {true, setOption, GROUP_ZONE,
-   "set-option ZONE                    Set or remove an option for ZONE Providing an empty value removes an option\n"
-   "  [producer|consumer]\n"
-   "  [coo|unique|group] VALUE\n"
-   "  [VALUE ...]"}},
+   "set-option ZONE [producer|consumer] [coo|unique|group] VALUE [VALUE...]\n\t"
+   "Set or remove an option for ZONE. Providing an empty value removes the\n\t"
+   "option"}},
   {"set-options-json", {true, setOptionsJson, GROUP_ZONE,
-   "set-options-json ZONE JSON         Change the options of ZONE to JSON"}},
+   "set-options-json ZONE JSON\n\t"
+   "Change the options of ZONE to JSON"}},
   {"set-presigned", {true, setPresigned, GROUP_DNSSEC,
-   "set-presigned ZONE                 Use presigned RRSIGs from storage"}},
+   "set-presigned ZONE\n\t"
+   "Use presigned RRSIGs from storage"}},
   {"set-publish-cdnskey", {true, setPublishCDNSKey, GROUP_CDNSKEY,
-   "set-publish-cdnskey ZONE [delete]  Enable sending CDNSKEY responses for ZONE. Add 'delete' to publish a CDNSKEY with a\n"
-   "                                   DNSSEC delete algorithm"}},
+   "set-publish-cdnskey ZONE [delete]\n\t"
+   "Enable sending CDNSKEY responses for ZONE. Add 'delete' to publish\n\t"
+   "a CDNSKEY with a DNSSEC delete algorithm"}},
   {"set-publish-cds", {true, setPublishCDs, GROUP_CDNSKEY,
-   "set-publish-cds ZONE [DIGESTALGOS] Enable sending CDS responses for ZONE, using DIGESTALGOS as signature algorithms\n"
-   "                                   DIGESTALGOS should be a comma separated list of numbers, it is '2' by default"}},
+   "set-publish-cds ZONE [DIGESTALGOS]\n\t"
+   "Enable sending CDS responses for ZONE, using DIGESTALGOS as signature\n\t"
+   "algorithms; DIGESTALGOS should be a comma-separated list of numbers,\n\t"
+   "defaulting to '2'"}},
   {"show-zone", {true, showZone, GROUP_DNSSEC,
-   "show-zone ZONE                     Show DNSSEC (public) key details about a zone"}},
+   "show-zone ZONE\n\t"
+   "Show DNSSEC (public) key details about a zone"}},
   {"test-algorithm", {false, testAlgorithm, GROUP_OTHER,
    ""}}, // TODO: short help line
   {"test-algorithms", {false, testAlgorithms, GROUP_OTHER,
@@ -4630,25 +4694,32 @@ static const std::unordered_map<std::string, commandDispatcher> commands{
   {"test-all-zones", {true, testAllZones, GROUP_ZONE,
    ""}}, // TODO: short help line
   {"test-schema", {true, testSchema, GROUP_OTHER,
-   "test-schema ZONE                   Test DB schema - will create ZONE"}},
+   "test-schema ZONE\n\t"
+   "Test DB schema - will create ZONE"}},
   {"test-speed", {true, testSpeed, GROUP_OTHER,
    ""}}, // TODO: short help line
   {"test-zone", {true, testZone, GROUP_ZONE,
    ""}}, // TODO: short help line
   {"unpublish-zone-key", {true, unpublishZoneKey, GROUP_ZONEKEY,
-   "unpublish-zone-key ZONE KEY-ID     Unpublish the zone key with key id KEY-ID in ZONE"}},
+   "unpublish-zone-key ZONE KEY-ID\n\t"
+   "Unpublish the zone key with key id KEY-ID in ZONE"}},
   {"unset-nsec3", {true, unsetNSec3, GROUP_NSEC3,
-   "unset-nsec3 ZONE                   Switch back to NSEC"}},
+   "unset-nsec3 ZONE\n\t"
+   "Switch ZONE back to NSEC"}},
   {"unset-presigned", {true, unsetPresigned, GROUP_DNSSEC,
-   "unset-presigned ZONE               No longer use presigned RRSIGs"}},
+   "unset-presigned ZONE\n\t"
+   "Stop using presigned RRSIGs on ZONE"}},
   {"unset-publish-cdnskey", {true, unsetPublishCDNSKey, GROUP_CDNSKEY,
-   "unset-publish-cdnskey ZONE         Disable sending CDNSKEY responses for ZONE"}},
+   "unset-publish-cdnskey ZONE\n\t"
+   "Disable sending CDNSKEY responses for ZONE"}},
   {"unset-publish-cds", {true, unsetPublishCDs, GROUP_CDNSKEY,
-   "unset-publish-cds ZONE             Disable sending CDS responses for ZONE"}},
+   "unset-publish-cds ZONE\n\t"
+   "Disable sending CDS responses for ZONE"}},
   {"verify-crypto", {true, verifyCrypto, GROUP_OTHER,
    ""}}, // TODO: short help line
   {"zonemd-verify-file", {true, zonemdVerifyFile, GROUP_ZONE,
-   "zonemd-verify-file ZONE FILE       Validate ZONEMD for ZONE"}}
+   "zonemd-verify-file ZONE FILE\n\t"
+   "Validate ZONEMD for ZONE"}}
 };
 // clang-format on
 
@@ -4685,7 +4756,7 @@ try
   }
 
   if (cmds.empty() || g_vm.count("help") != 0 || cmds.at(0) == "help") {
-    cout << "Usage:\npdnsutil [options] <command> [params ..]\n"
+    cout << "Usage:\npdnsutil [options] <command> [params...]\n"
          << endl;
 
     for (unsigned int group = GROUP_FIRST; group < GROUP_LAST; ++group) {

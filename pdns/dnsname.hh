@@ -80,6 +80,7 @@ public:
   static const size_t s_maxDNSNameLength = 255;
 
   DNSName() = default; //!< Constructs an *empty* DNSName, NOT the root!
+  virtual ~DNSName() = default;
   // Work around assertion in some boost versions that do not like self-assignment of boost::container::string
   DNSName& operator=(const DNSName& rhs)
   {
@@ -145,10 +146,27 @@ public:
   void trimToLabels(unsigned int);
   size_t hash(size_t init=0) const
   {
+    if (hasDiscriminator()) {
+      init = burtleCI((const unsigned char*)getDiscriminator().data(), getDiscriminator().length(), init);
+    }
     return burtleCI((const unsigned char*)d_storage.c_str(), d_storage.size(), init);
   }
   DNSName& operator+=(const DNSName& rhs)
   {
+    // Name construction rules wrt discriminators:
+    // - adding a discriminated name to a non-discriminated name is not allowed
+    //   (but the other way around, is).
+    // - adding two discriminated names is only allowed if both discriminators
+    //   are equal.
+    // In any case, the existing discriminator remains unmodified.
+    if (rhs.hasDiscriminator()) {
+      if (!hasDiscriminator()) {
+        throw std::runtime_error("Attempting to add discriminated DNSName to non-discriminated one");
+      }
+      if (rhs.getDiscriminator() != getDiscriminator()) {
+        throw std::runtime_error("Attempting to add discriminated DNSName to differently discriminated one");
+      }
+    }
     if(d_storage.size() + rhs.d_storage.size() > s_maxDNSNameLength + 1) // one extra byte for the second root label
       throwSafeRangeError("resulting name too long", rhs.d_storage.data(), rhs.d_storage.size());
     if(rhs.empty())
@@ -162,13 +180,19 @@ public:
     return *this;
   }
 
-  bool operator<(const DNSName& rhs)  const // this delivers _some_ kind of ordering, but not one useful in a DNS context. Really fast though.
+  // This delivers _some_ kind of ordering, but not one useful in a DNS context.
+  // Reasonably fast though (unless discriminators are used)
+  bool operator<(const DNSName& rhs)  const
   {
-    return std::lexicographical_compare(d_storage.rbegin(), d_storage.rend(),
-				 rhs.d_storage.rbegin(), rhs.d_storage.rend(),
-				 [](const unsigned char& a, const unsigned char& b) {
-					  return dns_tolower(a) < dns_tolower(b);
-					}); // note that this is case insensitive, including on the label lengths
+    bool comparison = std::lexicographical_compare(d_storage.rbegin(), d_storage.rend(),
+      rhs.d_storage.rbegin(), rhs.d_storage.rend(),
+      [](const unsigned char& a, const unsigned char& b) {
+        return dns_tolower(a) < dns_tolower(b);
+      }); // note that this is case insensitive, including on the label lengths
+    if (!comparison) {
+      return false;
+    }
+    return getDiscriminator().compare(rhs.getDiscriminator()) >= 0;
   }
 
   inline bool canonCompare(const DNSName& rhs) const;
@@ -216,7 +240,11 @@ public:
   };
   RawLabelsVisitor getRawLabelsVisitor() const;
 
-private:
+  // See DiscriminatedName below
+  virtual bool hasDiscriminator() const { return false; };
+  virtual std::string getDiscriminator() const { return {}; };
+
+protected:
   string_t d_storage;
 
   void packetParser(const char* qpos, size_t len, size_t offset, bool uncompress, uint16_t* qtype, uint16_t* qclass, unsigned int* consumed, int depth, uint16_t minOffset);
@@ -652,6 +680,10 @@ bool DNSName::operator==(const DNSName& rhs) const
     return false;
   }
 
+  if (rhs.hasDiscriminator() != hasDiscriminator()) {
+    return false;
+  }
+
   const auto* us = d_storage.cbegin();
   const auto* p = rhs.d_storage.cbegin();
   for (; us != d_storage.cend() && p != rhs.d_storage.cend(); ++us, ++p) {
@@ -659,7 +691,8 @@ bool DNSName::operator==(const DNSName& rhs) const
       return false;
     }
   }
-  return true;
+  // Discriminators are case-sensitive.
+  return rhs.getDiscriminator() == getDiscriminator();
 }
 
 struct DNSNameSet: public std::unordered_set<DNSName> {
@@ -668,4 +701,50 @@ struct DNSNameSet: public std::unordered_set<DNSName> {
         std::copy(begin(), end(), std::ostream_iterator<DNSName>(oss, "\n"));
         return oss.str();
     }
+};
+
+// Discriminated Names
+//
+// A Discriminated Name is a DNSName to which a discriminating suffix has
+// been added. The discriminator is never part of a DNS packet; it can be
+// only be used by backends to perform specific extra processing (such as
+// filtering) on requests performed for the DNSName.
+// This is currently used by the LMDB Backend to implement Bind-style
+// "views".
+
+class DiscriminatedName : public DNSName {
+public:
+  constexpr static char discriminator{':'};
+
+  DiscriminatedName() = default;
+
+  DiscriminatedName& operator=(const DiscriminatedName& rhs)
+  {
+    if (this != &rhs) {
+      d_storage = rhs.d_storage;
+      d_discriminator = rhs.d_discriminator;
+    }
+    return *this;
+  }
+  DiscriminatedName& operator=(DiscriminatedName&& rhs)
+  {
+    if (this != &rhs) {
+      d_storage = std::move(rhs.d_storage);
+      d_discriminator = std::move(rhs.d_discriminator);
+    }
+    return *this;
+  }
+
+  DiscriminatedName(const DiscriminatedName&) = default;
+  DiscriminatedName(DiscriminatedName&&) = default;
+
+  explicit DiscriminatedName(std::string_view);
+  explicit DiscriminatedName(std::string_view name, std::string_view disc):
+    DNSName(name), d_discriminator{disc} {}
+
+  virtual bool hasDiscriminator() const { return !d_discriminator.empty(); }
+  virtual std::string getDiscriminator() const { return d_discriminator; }
+
+protected:
+  std::string d_discriminator{};
 };

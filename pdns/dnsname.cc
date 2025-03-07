@@ -55,6 +55,10 @@ void DNSName::throwSafeRangeError(const std::string& msg, const char* buf, size_
 
 DNSName::DNSName(const std::string_view sw)
 {
+  // Maybe only temporary while this is being worked on
+  if (auto disc = sw.find(DiscriminatedName::discriminator); disc != std::string_view::npos) {
+    throw std::runtime_error("Attempting to create DNSName from discriminated name");
+  }
   const char* p = sw.data();
   size_t length = sw.length();
 
@@ -729,4 +733,16 @@ bool DNSName::RawLabelsVisitor::pop_back()
 bool DNSName::RawLabelsVisitor::empty() const
 {
   return d_position == 0;
+}
+
+// Discriminated Names
+
+DiscriminatedName::DiscriminatedName(std::string_view name)
+{
+  if (auto disc = name.find(discriminator); disc != std::string_view::npos) {
+    // May end up being empty
+    d_discriminator = name.substr(disc + 1);
+    name = name.substr(0, disc);
+  }
+  new(this) DNSName(name);
 }

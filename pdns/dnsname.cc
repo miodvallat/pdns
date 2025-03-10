@@ -730,3 +730,91 @@ bool DNSName::RawLabelsVisitor::empty() const
 {
   return d_position == 0;
 }
+
+DiscriminatedName::DiscriminatedName(const DiscriminatedName &rhs) :
+  d_name(d_name_store), d_discriminator(rhs.d_discriminator)
+{
+  if (rhs.d_name == rhs.d_name_store) {
+    d_name_store = rhs.d_name_store; // deep copy
+  } else {
+    d_name = rhs.d_name; // assign out-of-object reference
+  }
+}
+
+DiscriminatedName::DiscriminatedName(DiscriminatedName &&rhs) :
+  d_name(d_name_store), d_discriminator(std::move(rhs.d_discriminator))
+{
+  if (rhs.d_name == rhs.d_name_store) {
+    d_name_store = std::move(rhs.d_name_store); // deep move
+  } else {
+    d_name = rhs.d_name; // assign out-of-object reference
+  }
+}
+
+DiscriminatedName::DiscriminatedName(std::string_view name) :
+  d_name(d_name_store)
+{
+  // TODO: should we check and ignore escaped separators?
+  if (auto disc = name.find(separator); disc != std::string_view::npos) {
+    d_discriminator = name.substr(disc + 1);
+    name = name.substr(0, disc);
+  }
+  d_name_store = DNSName(name);
+}
+
+DiscriminatedName& DiscriminatedName::operator=(const DiscriminatedName& rhs)
+{
+  d_discriminator = rhs.d_discriminator;
+  if (rhs.d_name == rhs.d_name_store) {
+    d_name_store = rhs.d_name_store; // deep copy
+    d_name = d_name_store;
+  } else {
+    d_name = rhs.d_name; // assign out-of-object reference
+  }
+  return *this;
+}
+
+DiscriminatedName& DiscriminatedName::operator=(DiscriminatedName&& rhs)
+{
+  d_discriminator = std::move(rhs.d_discriminator);
+  if (rhs.d_name == rhs.d_name_store) {
+    d_name_store = std::move(rhs.d_name_store); // deep move
+    d_name = d_name_store;
+  } else {
+    d_name = rhs.d_name; // assign out-of-object reference
+  }
+  return *this;
+}
+
+std::string DiscriminatedName::toString(const std::string& sep, const bool trailing) const
+{
+  std::string ret = d_name.toString(sep, trailing);
+  if (hasDiscriminator()) {
+    ret += separator;
+    ret += d_discriminator;
+  }
+  return ret;
+}
+void DiscriminatedName::toString(std::string& output, const std::string& sep, const bool trailing) const
+{
+  d_name.toString(output, sep, trailing);
+  if (hasDiscriminator()) {
+    output += separator;
+    output += d_discriminator;
+  }
+}
+
+std::string DiscriminatedName::toLogString() const
+{
+  std::string ret = d_name.toLogString();
+  if (hasDiscriminator()) {
+    ret += separator;
+    ret += d_discriminator;
+  }
+  return ret;
+}
+
+std::ostream & operator<<(std::ostream &os, const DiscriminatedName& d)
+{
+  return os <<d.toLogString();
+}

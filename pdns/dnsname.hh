@@ -34,6 +34,8 @@
 #include <unordered_set>
 #include <string_view>
 
+using namespace std::string_view_literals;
+
 #include <boost/version.hpp>
 #include <boost/container/string.hpp>
 
@@ -669,3 +671,60 @@ struct DNSNameSet: public std::unordered_set<DNSName> {
         return oss.str();
     }
 };
+
+// Discriminated Names
+//
+// A Discriminated Name is a DNSName to which a discriminating suffix is
+// appended. The discrіminator itself is never part of a DNS packet; it can
+// only be used by backends to perform specific extra processing (such as
+// filtering) on requests performed for the DNSName.
+// This is currently used by the LMDB Backend to implement Bind-style
+// "views".
+
+class DiscriminatedName // std::pair<DNSName, std::string> in spirit
+{
+public:
+  // The character used to separate a name from its discriminator.
+  constexpr static char separator{':'};
+
+  DiscriminatedName() : d_name(d_name_store) {}
+  DiscriminatedName(const DiscriminatedName &);
+  DiscriminatedName(DiscriminatedName &&);
+  DiscriminatedName(std::string_view);
+  DiscriminatedName(DNSName& name, const std::string_view suffix = ""sv) :
+    d_name(name), d_discriminator(suffix) {}
+  DiscriminatedName(const DNSName& name, const std::string_view suffix = ""sv) :
+    d_name(const_cast<DNSName &>(name)), d_discriminator(suffix) {}
+
+  DiscriminatedName& operator=(const DiscriminatedName&);
+  DiscriminatedName& operator=(DiscriminatedName&&);
+
+  explicit operator DNSName() const { return d_name; }
+  explicit operator DNSName&() { return d_name; }
+  explicit operator const DNSName&() const { return d_name; }
+
+  bool hasDiscriminator() const { return !d_discriminator.empty(); }
+  std::string getDiscriminator() const { return d_discriminator; }
+
+  std::string toString(const std::string& separator=".", const bool trailing=true) const;              //!< Our human-friendly, escaped, representation
+  void toString(std::string& output, const std::string& separator=".", const bool trailing=true) const;
+  std::string toLogString() const; //!< like plain toString, but returns (empty) on empty names
+
+  size_t wirelength() const { return d_name.wirelength(); }
+  bool chopOff() { return d_name.chopOff(); }
+  bool isPartOf(const DNSName& rhs) const { return d_name.isPartOf(rhs); }
+  bool isPartOf(const DiscriminatedName& rhs) const { return d_name.isPartOf(rhs.d_name); }
+
+private:
+  DNSName& d_name;
+  std::string d_discriminator{};
+
+  // This is ugly. Until we are confident enough our use of DiscriminatedName
+  // is safe and switch it to a derived class of DNSName, we need it to embed
+  // a DNSName reference so that operations such as UeberBackend::getSOAUncached
+  // can update it, so we have to keep both a reference and possible storage
+  // for it, for constructors which do not get passed a DNSName&.
+  DNSName d_name_store{};
+};
+
+std::ostream & operator<<(std::ostream &os, const DiscriminatedName& d);

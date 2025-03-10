@@ -669,3 +669,33 @@ struct DNSNameSet: public std::unordered_set<DNSName> {
         return oss.str();
     }
 };
+
+// Discriminated Names
+//
+// A Discriminated Name is a DNSName to which a discriminating suffix is
+// appended. The discrіminator itself is never part of a DNS packet; it can
+// only be used by backends to perform specific extra processing (such as
+// filtering) on requests performed for the DNSName.
+// This is currently used by the LMDB Backend to implement Bind-style
+// "views".
+
+class DiscriminatedName // std::pair<DNSName, std::string> in spirit
+{
+public:
+  // The character used to separate a name from its discriminator.
+  constexpr static char separator{':'};
+
+  DiscriminatedName(std::string_view);
+  DiscriminatedName(DNSName& name, const std::string_view suffix) :
+    d_name(std::move(name)), d_discriminator(suffix) {}
+
+  operator DNSName() const { return d_name; }
+  operator DNSName&() { return d_name; }
+
+  bool hasDiscriminator() const { return !d_discriminator.empty(); }
+  std::string getDiscriminator() const { return d_discriminator; }
+
+private:
+  DNSName d_name;
+  std::string d_discriminator{};
+};

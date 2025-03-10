@@ -730,3 +730,13 @@ bool DNSName::RawLabelsVisitor::empty() const
 {
   return d_position == 0;
 }
+
+DiscriminatedName::DiscriminatedName(std::string_view name)
+{
+  // TODO: should we check and ignore escaped separators?
+  if (auto disc = name.find(separator); disc != std::string_view::npos) {
+    d_discriminator = name.substr(disc + 1);
+    name = name.substr(0, disc);
+  }
+  d_name = DNSName(name);
+}

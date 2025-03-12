@@ -364,3 +364,289 @@ void fillSOAData(const string& content, SOAData& soaData)
     throw PDNSException("Out of range exception parsing '" + content + "'");
   }
 }
+
+// DiscriminatedName interfaces
+//
+// The following are defaults which will reject discriminators and pass the
+// inner DNSName to the DNSName interfaces. Backends which make use of
+// discriminators shall override these to implement the desired behaviour.
+
+void DNSBackend::lookup(const QType& qtype, const DiscriminatedName& qdomain, int zoneId, DNSPacket* pkt_p)
+{
+  if (qdomain.hasDiscriminator()) {
+    return; // throw something?
+  }
+  lookup(qtype, qdomain.operator const DNSName&(), zoneId, pkt_p);
+}
+
+bool DNSBackend::list(const DiscriminatedName& target, int domain_id, bool include_disabled)
+{
+  if (target.hasDiscriminator()) {
+    return false;
+  }
+  return list(target.operator const DNSName&(), domain_id, include_disabled);
+}
+
+bool DNSBackend::getSOA(const DiscriminatedName& domain, SOAData& soaData)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return getSOA(domain.operator const DNSName&(), soaData);
+}
+
+bool DNSBackend::listSubZone(const DiscriminatedName& zone, int domain_id)
+{
+  if (zone.hasDiscriminator()) {
+    return false;
+  }
+  return listSubZone(zone.operator const DNSName&(), domain_id);
+}
+
+bool DNSBackend::getAllDomainMetadata(const DiscriminatedName& name, std::map<std::string, std::vector<std::string>>& meta)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return getAllDomainMetadata(name.operator const DNSName&(), meta);
+}
+
+bool DNSBackend::getDomainMetadata(const DiscriminatedName& name, const std::string& kind, std::vector<std::string>& meta)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return getDomainMetadata(name.operator const DNSName&(), kind, meta);
+}
+
+bool DNSBackend::getDomainMetadataOne(const DiscriminatedName& name, const std::string& kind, std::string& value)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return getDomainMetadataOne(name.operator const DNSName&(), kind, value);
+}
+
+bool DNSBackend::setDomainMetadata(const DiscriminatedName& name, const std::string& kind, const std::vector<std::string>& meta)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return setDomainMetadata(name.operator const DNSName&(), kind, meta);
+}
+
+bool DNSBackend::setDomainMetadataOne(const DiscriminatedName& name, const std::string& kind, const std::string& value)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return setDomainMetadataOne(name.operator const DNSName&(), kind, value);
+}
+
+bool DNSBackend::getAuth(const DiscriminatedName& target, SOAData* sd)
+{
+  if (target.hasDiscriminator()) {
+    return false;
+  }
+  return getAuth(target.operator const DNSName&(), sd);
+}
+
+bool DNSBackend::getDomainKeys(const DiscriminatedName& name, std::vector<KeyData>& keys)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return getDomainKeys(name.operator const DNSName&(), keys);
+}
+
+bool DNSBackend::removeDomainKey(const DiscriminatedName& name, unsigned int id)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return removeDomainKey(name.operator const DNSName&(), id);
+}
+
+bool DNSBackend::addDomainKey(const DiscriminatedName& name, const KeyData& key, int64_t& id)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return addDomainKey(name.operator const DNSName&(), key, id);
+}
+
+bool DNSBackend::activateDomainKey(const DiscriminatedName& name, unsigned int id)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return activateDomainKey(name.operator const DNSName&(), id);
+}
+
+bool DNSBackend::deactivateDomainKey(const DiscriminatedName& name, unsigned int id)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return deactivateDomainKey(name.operator const DNSName&(), id);
+}
+
+bool DNSBackend::publishDomainKey(const DiscriminatedName& name, unsigned int id)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return publishDomainKey(name.operator const DNSName&(), id);
+}
+
+bool DNSBackend::unpublishDomainKey(const DiscriminatedName& name, unsigned int id)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return unpublishDomainKey(name.operator const DNSName&(), id);
+}
+
+bool DNSBackend::setTSIGKey(const DiscriminatedName& name, const DNSName& algorithm, const string& content)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return setTSIGKey(name.operator const DNSName&(), algorithm, content);
+}
+
+bool DNSBackend::getTSIGKey(const DiscriminatedName& name, DNSName& algorithm, string& content)
+{
+  if (name.hasDiscriminator()) {
+    return false;
+  }
+  return getTSIGKey(name.operator const DNSName&(), algorithm, content);
+}
+
+bool DNSBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const DiscriminatedName& qname, DNSName& unhashed, DNSName& before, DNSName& after)
+{
+  if (qname.hasDiscriminator()) {
+    return false;
+  }
+  return getBeforeAndAfterNamesAbsolute(id, qname.operator const DNSName&(), unhashed, before, after);
+}
+
+bool DNSBackend::getBeforeAndAfterNames(uint32_t id, const DiscriminatedName& zonename, const DNSName& qname, DNSName& before, DNSName& after)
+{
+  if (zonename.hasDiscriminator()) {
+    return false;
+  }
+  return getBeforeAndAfterNames(id, zonename.operator const DNSName&(), qname, before, after);
+}
+
+bool DNSBackend::updateDNSSECOrderNameAndAuth(uint32_t domain_id, const DiscriminatedName& qname, const DNSName& ordername, bool auth, const uint16_t qtype)
+{
+  if (qname.hasDiscriminator()) {
+    return false;
+  }
+  return updateDNSSECOrderNameAndAuth(domain_id, qname.operator const DNSName&(), ordername, auth, qtype);
+}
+
+bool DNSBackend::replaceComments(const uint32_t domain_id, const DiscriminatedName& qname, const QType& qt, const vector<Comment>& comments)
+{
+  if (qname.hasDiscriminator()) {
+    return false;
+  }
+  return replaceComments(domain_id, qname.operator const DNSName&(), qt, comments);
+}
+
+bool DNSBackend::startTransaction(const DiscriminatedName& qname, int id)
+{
+  if (qname.hasDiscriminator()) {
+    return false;
+  }
+  return startTransaction(qname.operator const DNSName&(), id);
+}
+
+bool DNSBackend::getDomainInfo(const DiscriminatedName& domain, DomainInfo& di, bool getSerial)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return getDomainInfo(domain.operator const DNSName&(), di, getSerial);
+}
+
+void DNSBackend::alsoNotifies(const DiscriminatedName& domain, set<string>* ips)
+{
+  if (domain.hasDiscriminator()) {
+    return; // throw something?
+  }
+  alsoNotifies(domain.operator const DNSName&(), ips);
+}
+
+bool DNSBackend::setPrimaries(const DiscriminatedName& domain, const vector<ComboAddress>& primaries)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return setPrimaries(domain.operator const DNSName&(), primaries);
+}
+
+bool DNSBackend::setKind(const DiscriminatedName& domain, const DomainInfo::DomainKind kind)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return setKind(domain.operator const DNSName&(), kind);
+}
+
+bool DNSBackend::setOptions(const DiscriminatedName& domain, const string& options)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return setOptions(domain.operator const DNSName&(), options);
+}
+
+bool DNSBackend::setCatalog(const DiscriminatedName& domain, const DNSName& catalog)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return setCatalog(domain.operator const DNSName&(), catalog);
+}
+
+bool DNSBackend::setAccount(const DiscriminatedName& domain, const string& account)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return setAccount(domain.operator const DNSName&(), account);
+}
+
+bool DNSBackend::autoPrimaryBackend(const string& ip, const DiscriminatedName& domain, const vector<DNSResourceRecord>& nsset, string* nameserver, string* account, DNSBackend** db)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return autoPrimaryBackend(ip, domain.operator const DNSName&(), nsset, nameserver, account, db);
+}
+
+bool DNSBackend::createDomain(const DiscriminatedName& domain, const DomainInfo::DomainKind kind, const vector<ComboAddress>& primaries, const string& account)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return createDomain(domain.operator const DNSName&(), kind, primaries, account);
+}
+
+bool DNSBackend::createSecondaryDomain(const string& ip, const DiscriminatedName& domain, const string& nameserver, const string& account)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return createSecondaryDomain(ip, domain.operator const DNSName&(), nameserver, account);
+}
+
+bool DNSBackend::deleteDomain(const DiscriminatedName& domain)
+{
+  if (domain.hasDiscriminator()) {
+    return false;
+  }
+  return deleteDomain(domain.operator const DNSName&());
+}

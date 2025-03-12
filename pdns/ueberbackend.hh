@@ -47,6 +47,7 @@ public:
   UeberBackend(const string& pname = "default");
   ~UeberBackend();
 
+  bool autoPrimaryBackend(const string& ip, const DiscriminatedName& domain, const vector<DNSResourceRecord>& nsset, string* nameserver, string* account, DNSBackend** dnsBackend);
   bool autoPrimaryBackend(const string& ip, const DNSName& domain, const vector<DNSResourceRecord>& nsset, string* nameserver, string* account, DNSBackend** dnsBackend);
 
   bool autoPrimaryAdd(const AutoPrimary& primary);
@@ -82,7 +83,7 @@ public:
 
     //! DNSPacket who asked this question
     DNSPacket* pkt_p{nullptr};
-    DNSName qname;
+    DiscriminatedName qname;
 
     //! Index of the current backend within the backends vector
     unsigned int i{0};
@@ -93,6 +94,7 @@ public:
     static AtomicCounter instances;
   };
 
+  void lookup(const QType& qtype, const DiscriminatedName& dname, int zoneId, DNSPacket* pkt_p = nullptr);
   void lookup(const QType& qtype, const DNSName& qname, int zoneId, DNSPacket* pkt_p = nullptr);
   /** Read a single record from a lookup(...) result. */
   bool get(DNSZoneRecord& resourceRecord);
@@ -100,36 +102,55 @@ public:
   void lookupEnd();
 
   /** Determines if we are authoritative for a zone, and at what level */
+  bool getAuth(const DiscriminatedName& target, const QType& qtype, SOAData* soaData, bool cachedOk = true);
   bool getAuth(const DNSName& target, const QType& qtype, SOAData* soaData, bool cachedOk = true);
   /** Load SOA info from backends, ignoring the cache.*/
+  bool getSOAUncached(const DiscriminatedName& discname, SOAData& soaData);
   bool getSOAUncached(const DNSName& domain, SOAData& soaData);
   void getAllDomains(vector<DomainInfo>* domains, bool getSerial, bool include_disabled);
 
   void getUnfreshSecondaryInfos(vector<DomainInfo>* domains);
   void getUpdatedPrimaries(vector<DomainInfo>& domains, std::unordered_set<DNSName>& catalogs, CatalogHashMap& catalogHashes);
+  bool getDomainInfo(const DiscriminatedName& domain, DomainInfo& domainInfo, bool getSerial = true);
   bool getDomainInfo(const DNSName& domain, DomainInfo& domainInfo, bool getSerial = true);
+  bool createDomain(const DiscriminatedName& domain, DomainInfo::DomainKind kind, const vector<ComboAddress>& primaries, const string& account);
   bool createDomain(const DNSName& domain, DomainInfo::DomainKind kind, const vector<ComboAddress>& primaries, const string& account);
 
   bool doesDNSSEC();
+  bool addDomainKey(const DiscriminatedName& name, const DNSBackend::KeyData& key, int64_t& keyID);
   bool addDomainKey(const DNSName& name, const DNSBackend::KeyData& key, int64_t& keyID);
+  bool getDomainKeys(const DiscriminatedName& name, std::vector<DNSBackend::KeyData>& keys);
   bool getDomainKeys(const DNSName& name, std::vector<DNSBackend::KeyData>& keys);
+  bool getAllDomainMetadata(const DiscriminatedName& name, std::map<std::string, std::vector<std::string>>& meta);
   bool getAllDomainMetadata(const DNSName& name, std::map<std::string, std::vector<std::string>>& meta);
+  bool getDomainMetadata(const DiscriminatedName& name, const std::string& kind, std::vector<std::string>& meta);
   bool getDomainMetadata(const DNSName& name, const std::string& kind, std::vector<std::string>& meta);
+  bool getDomainMetadata(const DiscriminatedName& name, const std::string& kind, std::string& meta);
   bool getDomainMetadata(const DNSName& name, const std::string& kind, std::string& meta);
+  bool setDomainMetadata(const DiscriminatedName& name, const std::string& kind, const std::vector<std::string>& meta);
   bool setDomainMetadata(const DNSName& name, const std::string& kind, const std::vector<std::string>& meta);
+  bool setDomainMetadata(const DiscriminatedName& name, const std::string& kind, const std::string& meta);
   bool setDomainMetadata(const DNSName& name, const std::string& kind, const std::string& meta);
 
+  bool removeDomainKey(const DiscriminatedName& name, unsigned int keyID);
   bool removeDomainKey(const DNSName& name, unsigned int keyID);
+  bool activateDomainKey(const DiscriminatedName& name, unsigned int keyID);
   bool activateDomainKey(const DNSName& name, unsigned int keyID);
+  bool deactivateDomainKey(const DiscriminatedName& name, unsigned int keyID);
   bool deactivateDomainKey(const DNSName& name, unsigned int keyID);
+  bool publishDomainKey(const DiscriminatedName& name, unsigned int keyID);
   bool publishDomainKey(const DNSName& name, unsigned int keyID);
+  bool unpublishDomainKey(const DiscriminatedName& name, unsigned int keyID);
   bool unpublishDomainKey(const DNSName& name, unsigned int keyID);
 
+  void alsoNotifies(const DiscriminatedName& domain, set<string>* ips);
   void alsoNotifies(const DNSName& domain, set<string>* ips);
   void rediscover(string* status = nullptr);
   void reload();
 
+  bool setTSIGKey(const DiscriminatedName& name, const DNSName& algorithm, const string& content);
   bool setTSIGKey(const DNSName& name, const DNSName& algorithm, const string& content);
+  bool getTSIGKey(const DiscriminatedName& name, DNSName& algorithm, string& content);
   bool getTSIGKey(const DNSName& name, DNSName& algorithm, string& content);
   bool getTSIGKeys(std::vector<struct TSIGKey>& keys);
   bool deleteTSIGKey(const DNSName& name);
@@ -153,7 +174,7 @@ private:
 
   struct Question
   {
-    DNSName qname;
+    DiscriminatedName qname;
     int zoneId;
     QType qtype;
   } d_question;

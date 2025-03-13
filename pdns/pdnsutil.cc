@@ -367,7 +367,7 @@ static int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, con
   }
 
   // Check for delegation in parent zone
-  DNSName parent(zone);
+  DiscriminatedName parent(zone);
   while(parent.chopOff()) {
     SOAData sd_p;
     if(B.getSOAUncached(parent, sd_p)) {
@@ -1003,7 +1003,7 @@ static int increaseSerial(const DNSName& zone, DNSSECKeeper &dk)
   return 0;
 }
 
-static int deleteZone(const DNSName &zone) {
+static int deleteZone(const DiscriminatedName &zone) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
   if (! B.getDomainInfo(zone, di)) {
@@ -1108,7 +1108,7 @@ static int listKeys(const string &zname, DNSSECKeeper& dk){
 
   if (!zname.empty()) {
     DomainInfo di;
-    if(!B.getDomainInfo(DNSName(zname), di)) {
+    if(!B.getDomainInfo(DiscriminatedName(zname), di)) {
       cerr << "Zone "<<zname<<" not found."<<endl;
       return EXIT_FAILURE;
     }
@@ -1125,7 +1125,7 @@ static int listKeys(const string &zname, DNSSECKeeper& dk){
   return EXIT_SUCCESS;
 }
 
-static int listZone(const DNSName &zone) {
+static int listZone(const DiscriminatedName &zone) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
 
@@ -1187,7 +1187,7 @@ static int read1char(){
     return c;
 }
 
-static int clearZone(const DNSName &zone) {
+static int clearZone(const DiscriminatedName &zone) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
 
@@ -1638,12 +1638,12 @@ static int createZone(const DNSName &zone, const DNSName& nsname) {
 static int addOrReplaceRecord(bool isAdd, const vector<string>& cmds) {
   DNSResourceRecord rr;
   vector<DNSResourceRecord> newrrs;
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   DNSName name;
   if (cmds.at(2) == "@")
-    name=zone;
+    name = zone.operator const DNSName&();
   else
-    name = DNSName(cmds.at(2)) + zone;
+    name = DNSName(cmds.at(2)) + zone.operator const DNSName&();
 
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -1805,7 +1805,7 @@ static int deleteRRSet(const std::string& zone_, const std::string& name_, const
 {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
-  DNSName zone(zone_);
+  DiscriminatedName zone(zone_);
   if(!B.getDomainInfo(zone, di)) {
     cerr << "Zone '" << zone << "' does not exist" << endl;
     return EXIT_FAILURE;
@@ -1816,9 +1816,9 @@ static int deleteRRSet(const std::string& zone_, const std::string& name_, const
 
   DNSName name;
   if(name_=="@")
-    name=zone;
+    name=zone.operator const DNSName&();
   else
-    name=DNSName(name_)+zone;
+    name=DNSName(name_)+zone.operator const DNSName&();
 
   QType qt(QType::chartocode(type_.c_str()));
   di.backend->startTransaction(zone, -1);
@@ -2023,7 +2023,7 @@ static bool disableDNSSECOnZone(DNSSECKeeper& dk, const DNSName& zone)
   return ret;
 }
 
-static int setZoneOptionsJson(const DNSName& zone, const string& options)
+static int setZoneOptionsJson(const DiscriminatedName& zone, const string& options)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2039,7 +2039,7 @@ static int setZoneOptionsJson(const DNSName& zone, const string& options)
   return EXIT_SUCCESS;
 }
 
-static int setZoneOption(const DNSName& zone, const string& type, const string& option, const set<string>& values)
+static int setZoneOption(const DiscriminatedName& zone, const string& type, const string& option, const set<string>& values)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2078,7 +2078,7 @@ static int setZoneOption(const DNSName& zone, const string& type, const string& 
   return EXIT_SUCCESS;
 }
 
-static int setZoneCatalog(const DNSName& zone, const DNSName& catalog)
+static int setZoneCatalog(const DiscriminatedName& zone, const DNSName& catalog)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2094,7 +2094,7 @@ static int setZoneCatalog(const DNSName& zone, const DNSName& catalog)
   return EXIT_SUCCESS;
 }
 
-static int setZoneAccount(const DNSName& zone, const string &account)
+static int setZoneAccount(const DiscriminatedName& zone, const string &account)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2110,7 +2110,7 @@ static int setZoneAccount(const DNSName& zone, const string &account)
   return EXIT_SUCCESS;
 }
 
-static int setZoneKind(const DNSName& zone, const DomainInfo::DomainKind kind)
+static int setZoneKind(const DiscriminatedName& zone, const DomainInfo::DomainKind kind)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2126,7 +2126,7 @@ static int setZoneKind(const DNSName& zone, const DomainInfo::DomainKind kind)
   return EXIT_SUCCESS;
 }
 
-static bool showZone(DNSSECKeeper& dnsseckeeper, const DNSName& zone, bool exportDS = false) // NOLINT(readability-function-cognitive-complexity)
+static bool showZone(DNSSECKeeper& dnsseckeeper, const DiscriminatedName& zone, bool exportDS = false) // NOLINT(readability-function-cognitive-complexity)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2178,7 +2178,7 @@ static bool showZone(DNSSECKeeper& dnsseckeeper, const DNSName& zone, bool expor
     }
   }
 
-  if(!dnsseckeeper.isSecuredZone(zone)) {
+  if(!dnsseckeeper.isSecuredZone(zone.operator const DNSName&())) {
     auto &outstream = (exportDS ? cerr : cout);
     outstream << "Zone is not actively secured" << endl;
     if (exportDS) {
@@ -2190,9 +2190,9 @@ static bool showZone(DNSSECKeeper& dnsseckeeper, const DNSName& zone, bool expor
 
   NSEC3PARAMRecordContent ns3pr;
   bool narrow = false;
-  bool haveNSEC3=dnsseckeeper.getNSEC3PARAM(zone, &ns3pr, &narrow);
+  bool haveNSEC3=dnsseckeeper.getNSEC3PARAM(zone.operator const DNSName&(), &ns3pr, &narrow);
 
-  DNSSECKeeper::keyset_t keyset=dnsseckeeper.getKeys(zone);
+  DNSSECKeeper::keyset_t keyset=dnsseckeeper.getKeys(zone.operator const DNSName&());
 
   if (!exportDS) {
     std::vector<std::string> meta;
@@ -2221,7 +2221,7 @@ static bool showZone(DNSSECKeeper& dnsseckeeper, const DNSName& zone, bool expor
 
   }
 
-  if (dnsseckeeper.isPresigned(zone)) {
+  if (dnsseckeeper.isPresigned(zone.operator const DNSName&())) {
     if (!exportDS) {
       cout <<"Zone is presigned"<<endl;
     }
@@ -2268,19 +2268,19 @@ static bool showZone(DNSSECKeeper& dnsseckeeper, const DNSName& zone, bool expor
 
       const std::string prefix(exportDS ? "" : "DS = ");
       if (g_verbose) {
-        cout<<prefix<<zone.toString()<<" IN DS "<<makeDSFromDNSKey(zone, key, DNSSECKeeper::DIGEST_SHA1).getZoneRepresentation() << " ; ( SHA1 digest )" << endl;
+        cout<<prefix<<zone.toString()<<" IN DS "<<makeDSFromDNSKey(zone.operator const DNSName&(), key, DNSSECKeeper::DIGEST_SHA1).getZoneRepresentation() << " ; ( SHA1 digest )" << endl;
       }
-      cout<<prefix<<zone.toString()<<" IN DS "<<makeDSFromDNSKey(zone, key, DNSSECKeeper::DIGEST_SHA256).getZoneRepresentation() << " ; ( SHA256 digest )" << endl;
+      cout<<prefix<<zone.toString()<<" IN DS "<<makeDSFromDNSKey(zone.operator const DNSName&(), key, DNSSECKeeper::DIGEST_SHA256).getZoneRepresentation() << " ; ( SHA256 digest )" << endl;
       if (g_verbose) {
         try {
-          string output=makeDSFromDNSKey(zone, key, DNSSECKeeper::DIGEST_GOST).getZoneRepresentation();
+          string output=makeDSFromDNSKey(zone.operator const DNSName&(), key, DNSSECKeeper::DIGEST_GOST).getZoneRepresentation();
           cout<<prefix<<zone.toString()<<" IN DS "<<output<< " ; ( GOST R 34.11-94 digest )" << endl;
         }
         catch(...)
         {}
       }
       try {
-        string output=makeDSFromDNSKey(zone, key, DNSSECKeeper::DIGEST_SHA384).getZoneRepresentation();
+        string output=makeDSFromDNSKey(zone.operator const DNSName&(), key, DNSSECKeeper::DIGEST_SHA384).getZoneRepresentation();
         cout<<prefix<<zone.toString()<<" IN DS "<<output<< " ; ( SHA-384 digest )" << endl;
       }
       catch(...)
@@ -2323,19 +2323,19 @@ static bool showZone(DNSSECKeeper& dnsseckeeper, const DNSName& zone, bool expor
         const auto &key = value.first.getDNSKEY();
         const std::string prefix(exportDS ? "" : "DS = ");
         if (g_verbose) {
-          cout<<prefix<<zone.toString()<<" IN DS "<<makeDSFromDNSKey(zone, key, DNSSECKeeper::DIGEST_SHA1).getZoneRepresentation() << " ; ( SHA1 digest )" << endl;
+          cout<<prefix<<zone.toString()<<" IN DS "<<makeDSFromDNSKey(zone.operator const DNSName&(), key, DNSSECKeeper::DIGEST_SHA1).getZoneRepresentation() << " ; ( SHA1 digest )" << endl;
         }
-        cout<<prefix<<zone.toString()<<" IN DS "<<makeDSFromDNSKey(zone, key, DNSSECKeeper::DIGEST_SHA256).getZoneRepresentation() << " ; ( SHA256 digest )" << endl;
+        cout<<prefix<<zone.toString()<<" IN DS "<<makeDSFromDNSKey(zone.operator const DNSName&(), key, DNSSECKeeper::DIGEST_SHA256).getZoneRepresentation() << " ; ( SHA256 digest )" << endl;
         if (g_verbose) {
           try {
-            string output=makeDSFromDNSKey(zone, key, DNSSECKeeper::DIGEST_GOST).getZoneRepresentation();
+            string output=makeDSFromDNSKey(zone.operator const DNSName&(), key, DNSSECKeeper::DIGEST_GOST).getZoneRepresentation();
             cout<<prefix<<zone.toString()<<" IN DS "<<output<< " ; ( GOST R 34.11-94 digest )" << endl;
           }
           catch(...)
           {}
         }
         try {
-          string output=makeDSFromDNSKey(zone, key, DNSSECKeeper::DIGEST_SHA384).getZoneRepresentation();
+          string output=makeDSFromDNSKey(zone.operator const DNSName&(), key, DNSSECKeeper::DIGEST_SHA384).getZoneRepresentation();
           cout<<prefix<<zone.toString()<<" IN DS "<<output<< " ; ( SHA-384 digest )" << endl;
         }
         catch(...)
@@ -2569,7 +2569,7 @@ static int testSchema(DNSSECKeeper& dk, const DNSName& zone)
   return EXIT_SUCCESS;
 }
 
-static int addOrSetMeta(const DNSName& zone, const string& kind, const vector<string>& values, bool clobber) {
+static int addOrSetMeta(const DiscriminatedName& zone, const string& kind, const vector<string>& values, bool clobber) {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
 
@@ -2845,7 +2845,7 @@ static int showZone(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!showZone(dk, DNSName(cmds.at(1)))) {
+  if (!showZone(dk, DiscriminatedName(cmds.at(1)))) {
     return 1;
   }
   return 0;
@@ -2857,7 +2857,7 @@ static int exportZoneDS(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!showZone(dk, DNSName(cmds.at(1)), true)) {
+  if (!showZone(dk, DiscriminatedName(DNSName(cmds.at(1))), true)) {
     return 1;
   }
   return 0;
@@ -3129,7 +3129,7 @@ static int deleteZone(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() != 2) {
     return usage(synopsis);
   }
-  return deleteZone(DNSName(cmds.at(1)));
+  return deleteZone(DiscriminatedName(cmds.at(1)));
 }
 
 static int createZone(vector<string>& cmds, const std::string_view synopsis)
@@ -3147,7 +3147,7 @@ static int createSecondaryZone(vector<string>& cmds, const std::string_view syno
   }
   UtilBackend B; // NOLINT(readability-identifier-length)
   DomainInfo di; // NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   if (B.getDomainInfo(zone, di)) {
     cerr << "Zone '" << zone << "' exists already" << endl;
     return EXIT_FAILURE;
@@ -3172,7 +3172,7 @@ static int changeSecondaryZonePrimary(vector<string>& cmds, const std::string_vi
   }
   UtilBackend B; // NOLINT(readability-identifier-length)
   DomainInfo di; // NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   if (!B.getDomainInfo(zone, di)) {
     cerr << "Zone '" << zone << "' doesn't exist" << endl;
     return EXIT_FAILURE;
@@ -3246,7 +3246,7 @@ static int listZone(vector<string>& cmds, const std::string_view synopsis)
     cmds.at(1).clear();
   }
 
-  return listZone(DNSName(cmds.at(1)));
+  return listZone(DiscriminatedName(cmds.at(1)));
 }
 
 static int editZone(vector<string>& cmds, const std::string_view synopsis)
@@ -3271,7 +3271,7 @@ static int clearZone(vector<string>& cmds, const std::string_view synopsis)
     cmds.at(1).clear();
   }
 
-  return clearZone(DNSName(cmds.at(1)));
+  return clearZone(DiscriminatedName(cmds.at(1)));
 }
 
 static int listKeys(vector<string>& cmds, const std::string_view synopsis)
@@ -3378,7 +3378,7 @@ static int setKind(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() != 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   auto kind = DomainInfo::stringToKind(cmds.at(2));
   return setZoneKind(zone, kind);
 }
@@ -3399,7 +3399,7 @@ static int setOptionsJson(vector<string>& cmds, const std::string_view synopsis)
     }
   }
 
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
 
   return setZoneOptionsJson(zone, cmds.at(2));
 }
@@ -3413,7 +3413,7 @@ static int setOption(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
 
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   set<string> values;
   for (unsigned int n = 4; n < cmds.size(); ++n) { // NOLINT(readability-identifier-length)
     if (!cmds.at(n).empty()) {
@@ -3429,7 +3429,7 @@ static int setCatalog(vector<string>& cmds, const std::string_view synopsis)
   if (cmds.size() < 2) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   DNSName catalog; // Create an empty DNSName()
   if (cmds.size() > 2 && !cmds.at(2).empty()) {
     catalog = DNSName(cmds.at(2));
@@ -3442,7 +3442,7 @@ static int setAccount(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() != 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   return setZoneAccount(zone, cmds.at(2));
 }
 
@@ -3843,7 +3843,7 @@ static int generateTSIGKey(vector<string>& cmds, const std::string_view synopsis
   if (cmds.size() < 3) {
     return usage(synopsis);
   }
-  DNSName name(cmds.at(1));
+  DiscriminatedName name(cmds.at(1));
   DNSName algo(cmds.at(2));
   string key;
   try {
@@ -3868,7 +3868,7 @@ static int importTSIGKey(vector<string>& cmds, const std::string_view synopsis)
   if (cmds.size() < 4) {
     return usage(synopsis);
   }
-  DNSName name(cmds.at(1));
+  DiscriminatedName name(cmds.at(1));
   string algo = cmds.at(2);
   string key = cmds.at(3);
 
@@ -3919,7 +3919,7 @@ static int activateTSIGKey(vector<string>& cmds, const std::string_view synopsis
   if (cmds.size() < 4) {
     return usage(synopsis);
   }
-  DNSName zname(cmds.at(1));
+  DiscriminatedName zname(cmds.at(1));
   string name = cmds.at(2);
   if (cmds.at(3) == "primary" || cmds.at(3) == "producer") {
     metaKey = "TSIG-ALLOW-AXFR";
@@ -3967,7 +3967,7 @@ static int deactivateTSIGKey(vector<string>& cmds, const std::string_view synops
   if (cmds.size() < 4) {
     return usage(synopsis);
   }
-  DNSName zname(cmds.at(1));
+  DiscriminatedName zname(cmds.at(1));
   string name = cmds.at(2);
   if (cmds.at(3) == "primary" || cmds.at(3) == "producer") {
     metaKey = "TSIG-ALLOW-AXFR";
@@ -4015,7 +4015,7 @@ static int getMeta(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   UtilBackend B("default"); // NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   vector<string> keys;
 
   DomainInfo di; // NOLINT(readability-identifier-length)
@@ -4050,7 +4050,7 @@ static int setMeta(vector<string>& cmds, const std::string_view synopsis)
   if (cmds.size() < 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  DiscriminatedName zone(cmds.at(1));
   string kind = cmds.at(2);
   const static std::array<string, 7> multiMetaWhitelist = {"ALLOW-AXFR-FROM", "ALLOW-DNSUPDATE-FROM",
     "ALSO-NOTIFY", "TSIG-ALLOW-AXFR", "TSIG-ALLOW-DNSUPDATE", "GSS-ALLOW-AXFR-PRINCIPAL",
@@ -4443,7 +4443,7 @@ static int backendLookup(vector<string>& cmds, const std::string_view synopsis)
     type = DNSRecordContent::TypeToNumber(cmds.at(3));
   }
 
-  DNSName name{cmds.at(2)};
+  DiscriminatedName name{cmds.at(2)};
 
   DNSPacket queryPacket(true);
   Netmask clientNetmask;

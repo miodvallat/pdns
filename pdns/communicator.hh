@@ -189,8 +189,8 @@ private:
   int d_nsock4, d_nsock6;
   LockGuarded<map<pair<DNSName, string>, time_t>> d_holes;
 
-  void suck(const DNSName& domain, const ComboAddress& remote, bool force = false);
-  void ixfrSuck(const DNSName& domain, const TSIGTriplet& tt, const ComboAddress& laddr, const ComboAddress& remote, ZoneStatus& zs, vector<DNSRecord>* axfr);
+  void suck(const DiscriminatedName& domain, const ComboAddress& remote, bool force = false);
+  void ixfrSuck(const DiscriminatedName& domain, const TSIGTriplet& tt, const ComboAddress& laddr, const ComboAddress& remote, ZoneStatus& zs, vector<DNSRecord>* axfr);
 
   void secondaryRefresh(PacketHandler* P);
   void primaryUpdateCheck(PacketHandler* P);

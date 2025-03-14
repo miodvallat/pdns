@@ -89,7 +89,7 @@ double Ewma::getMax() const
   return d_max;
 }
 
-static void patchZone(UeberBackend& backend, const DNSName& zonename, DomainInfo& domainInfo, HttpRequest* req, HttpResponse* resp);
+static void patchZone(UeberBackend& backend, const DiscriminatedName& zonename, DomainInfo& domainInfo, HttpRequest* req, HttpResponse* resp);
 
 // QTypes that MUST NOT have multiple records of the same type in a given RRset.
 static const std::set<uint16_t> onlyOneEntryTypes = {QType::CNAME, QType::DNAME, QType::SOA};
@@ -384,7 +384,7 @@ static bool shouldDoRRSets(HttpRequest* req)
   throw ApiException("'rrsets' request parameter value '" + req->getvars["rrsets"] + "' is not supported");
 }
 
-static void fillZone(UeberBackend& backend, const DNSName& zonename, HttpResponse* resp, HttpRequest* req)
+static void fillZone(UeberBackend& backend, const DiscriminatedName& zonename, HttpResponse* resp, HttpRequest* req)
 {
   DomainInfo domainInfo;
 
@@ -667,7 +667,7 @@ static void checkDefaultDNSSECAlgos()
   }
 }
 
-static void throwUnableToSecure(const DNSName& zonename)
+static void throwUnableToSecure(const DiscriminatedName& zonename)
 {
   throw ApiException("No backend was able to secure '" + zonename.toString() + "', most likely because no DNSSEC"
                      + "capable backends are loaded, or because the backends have DNSSEC disabled. Check your configuration.");
@@ -676,7 +676,7 @@ static void throwUnableToSecure(const DNSName& zonename)
 /*
  * Add KSK and ZSK to an existing zone. Algorithms and sizes will be chosen per configuration.
  */
-static void addDefaultDNSSECKeys(DNSSECKeeper& dnssecKeeper, const DNSName& zonename)
+static void addDefaultDNSSECKeys(DNSSECKeeper& dnssecKeeper, const DiscriminatedName& zonename)
 {
   checkDefaultDNSSECAlgos();
   int k_algo = DNSSECKeeper::shorthand2algorithm(::arg()["default-ksk-algorithm"]);
@@ -772,7 +772,7 @@ static void extractJsonTSIGKeyIds(UeberBackend& backend, const Json& jsonArray, 
 }
 
 // Must be called within backend transaction.
-static void updateDomainSettingsFromDocument(UeberBackend& backend, DomainInfo& domainInfo, const DNSName& zonename, const Json& document, bool zoneWasModified)
+static void updateDomainSettingsFromDocument(UeberBackend& backend, DomainInfo& domainInfo, const DiscriminatedName& zonename, const Json& document, bool zoneWasModified)
 {
   std::optional<DomainInfo::DomainKind> kind;
   std::optional<vector<ComboAddress>> primaries;
@@ -1211,7 +1211,7 @@ static void apiZoneMetadataKindDELETE(HttpRequest* req, HttpResponse* resp)
 }
 
 // Throws 404 if the key with inquireKeyId does not exist
-static void apiZoneCryptoKeysCheckKeyExists(const DNSName& zonename, int inquireKeyId, DNSSECKeeper* dnssecKeeper)
+static void apiZoneCryptoKeysCheckKeyExists(const DiscriminatedName& zonename, int inquireKeyId, DNSSECKeeper* dnssecKeeper)
 {
   DNSSECKeeper::keyset_t keyset = dnssecKeeper->getKeys(zonename, false);
   bool found = false;
@@ -1226,7 +1226,7 @@ static void apiZoneCryptoKeysCheckKeyExists(const DNSName& zonename, int inquire
   }
 }
 
-static inline int getInquireKeyId(HttpRequest* req, const DNSName& zonename, DNSSECKeeper* dnsseckeeper)
+static inline int getInquireKeyId(HttpRequest* req, const DiscriminatedName& zonename, DNSSECKeeper* dnsseckeeper)
 {
   int inquireKeyId = -1;
   if (req->parameters.count("key_id") == 1) {
@@ -1236,7 +1236,7 @@ static inline int getInquireKeyId(HttpRequest* req, const DNSName& zonename, DNS
   return inquireKeyId;
 }
 
-static void apiZoneCryptokeysExport(const DNSName& zonename, int64_t inquireKeyId, HttpResponse* resp, DNSSECKeeper* dnssec_dk)
+static void apiZoneCryptokeysExport(const DiscriminatedName& zonename, int64_t inquireKeyId, HttpResponse* resp, DNSSECKeeper* dnssec_dk)
 {
   DNSSECKeeper::keyset_t keyset = dnssec_dk->getKeys(zonename, false);
 
@@ -1288,7 +1288,7 @@ static void apiZoneCryptokeysExport(const DNSName& zonename, int64_t inquireKeyI
       Json::array dses;
       for (const uint8_t keyid : {DNSSECKeeper::DIGEST_SHA256, DNSSECKeeper::DIGEST_SHA384}) {
         try {
-          string dsRecordContent = makeDSFromDNSKey(zonename, value.first.getDNSKEY(), keyid).getZoneRepresentation();
+          string dsRecordContent = makeDSFromDNSKey(zonename.operator const DNSName&(), value.first.getDNSKEY(), keyid).getZoneRepresentation();
 
           dses.emplace_back(dsRecordContent);
 
@@ -2303,7 +2303,7 @@ static void apiServerZoneRectify(HttpRequest* req, HttpResponse* resp)
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity): TODO Refactor this function.
-static void patchZone(UeberBackend& backend, const DNSName& zonename, DomainInfo& domainInfo, HttpRequest* req, HttpResponse* resp)
+static void patchZone(UeberBackend& backend, const DiscriminatedName& zonename, DomainInfo& domainInfo, HttpRequest* req, HttpResponse* resp)
 {
   bool zone_disabled = false;
   SOAData soaData;
@@ -2353,7 +2353,7 @@ static void patchZone(UeberBackend& backend, const DNSName& zonename, DomainInfo
       }
       else if (changetype == "REPLACE") {
         // we only validate for REPLACE, as DELETE can be used to "fix" out of zone records.
-        if (!qname.isPartOf(zonename) && qname != zonename) {
+        if (!qname.isPartOf(zonename.operator const DNSName&()) && qname != zonename.operator const DNSName&()) {
           throw ApiException("RRset " + qname.toString() + " IN " + qtype.toString() + ": Name is out of zone");
         }
 
@@ -2375,11 +2375,11 @@ static void patchZone(UeberBackend& backend, const DNSName& zonename, DomainInfo
 
             for (DNSResourceRecord& resourceRecord : new_records) {
               resourceRecord.domain_id = static_cast<int>(domainInfo.id);
-              if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zonename) {
+              if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zonename.operator const DNSName&()) {
                 soa_edit_done = increaseSOARecord(resourceRecord, soa_edit_api_kind, soa_edit_kind);
               }
             }
-            checkNewRecords(new_records, zonename);
+            checkNewRecords(new_records, zonename.operator const DNSName&());
           }
 
           if (replace_comments) {
@@ -2426,7 +2426,7 @@ static void patchZone(UeberBackend& backend, const DNSName& zonename, DomainInfo
             }
           }
 
-          if (dname_seen && ns_seen && qname != zonename) {
+          if (dname_seen && ns_seen && qname != zonename.operator const DNSName&()) {
             throw ApiException("RRset " + qname.toString() + " IN " + qtype.toString() + ": Cannot have both NS and DNAME except in zone apex");
           }
           if (!new_records.empty() && domainInfo.kind == DomainInfo::Consumer) {

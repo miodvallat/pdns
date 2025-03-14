@@ -425,7 +425,7 @@ static bool catalogProcess(const DomainInfo& di, vector<DNSResourceRecord>& rrs,
   return catalogDiff(di, fromXFR, fromDB, logPrefix);
 }
 
-void CommunicatorClass::ixfrSuck(const DNSName& domain, const TSIGTriplet& tt, const ComboAddress& laddr, const ComboAddress& remote, ZoneStatus& zs, vector<DNSRecord>* axfr)
+void CommunicatorClass::ixfrSuck(const DiscriminatedName& domain, const TSIGTriplet& tt, const ComboAddress& laddr, const ComboAddress& remote, ZoneStatus& zs, vector<DNSRecord>* axfr)
 {
   string logPrefix = "IXFR-in zone '" + domain.toLogString() + "', primary '" + remote.toString() + "', ";
 
@@ -451,7 +451,7 @@ void CommunicatorClass::ixfrSuck(const DNSName& domain, const TSIGTriplet& tt, c
     soatimes drsoa_soatimes = {di.serial, 0, 0, 0, 0};
     DNSRecord drsoa;
     drsoa.setContent(std::make_shared<SOARecordContent>(g_rootdnsname, g_rootdnsname, drsoa_soatimes));
-    auto deltas = getIXFRDeltas(remote, domain, drsoa, xfrTimeout, false, tt, laddr.sin4.sin_family ? &laddr : nullptr, ((size_t)::arg().asNum("xfr-max-received-mbytes")) * 1024 * 1024);
+    auto deltas = getIXFRDeltas(remote, domain.operator const DNSName&(), drsoa, xfrTimeout, false, tt, laddr.sin4.sin_family ? &laddr : nullptr, ((size_t)::arg().asNum("xfr-max-received-mbytes")) * 1024 * 1024);
     zs.numDeltas = deltas.size();
     //    cout<<"Got "<<deltas.size()<<" deltas from serial "<<di.serial<<", applying.."<<endl;
 
@@ -483,9 +483,9 @@ void CommunicatorClass::ixfrSuck(const DNSName& domain, const TSIGTriplet& tt, c
         vector<DNSRecord> rrset;
         {
           DNSZoneRecord zrr;
-          di.backend->lookup(QType(g.first.second), g.first.first + domain, di.id);
+          di.backend->lookup(QType(g.first.second), g.first.first + domain.operator const DNSName&(), di.id);
           while (di.backend->get(zrr)) {
-            zrr.dr.d_name.makeUsRelative(domain);
+            zrr.dr.d_name.makeUsRelative(domain.operator const DNSName&());
             rrset.push_back(zrr.dr);
           }
         }
@@ -505,7 +505,7 @@ void CommunicatorClass::ixfrSuck(const DNSName& domain, const TSIGTriplet& tt, c
         vector<DNSResourceRecord> replacement;
         for (const auto& dr : rrset) {
           auto rr = DNSResourceRecord::fromWire(dr);
-          rr.qname += domain;
+          rr.qname += domain.operator const DNSName&();
           rr.domain_id = di.id;
           if (dr.d_type == QType::SOA) {
             //            cout<<"New SOA: "<<x.d_content->getZoneRepresentation()<<endl;
@@ -516,7 +516,7 @@ void CommunicatorClass::ixfrSuck(const DNSName& domain, const TSIGTriplet& tt, c
           replacement.push_back(rr);
         }
 
-        di.backend->replaceRRSet(di.id, g.first.first + domain, QType(g.first.second), replacement);
+        di.backend->replaceRRSet(di.id, g.first.first + domain.operator const DNSName&(), QType(g.first.second), replacement);
       }
       di.backend->commitTransaction();
     }
@@ -636,16 +636,16 @@ static vector<DNSResourceRecord> doAxfr(const ComboAddress& raddr, const DNSName
   return rrs;
 }
 
-void CommunicatorClass::suck(const DNSName& domain, const ComboAddress& remote, bool force) // NOLINT(readability-function-cognitive-complexity)
+void CommunicatorClass::suck(const DiscriminatedName& domain, const ComboAddress& remote, bool force) // NOLINT(readability-function-cognitive-complexity)
 {
   {
     auto data = d_data.lock();
-    if (data->d_inprogress.count(domain)) {
+    if (data->d_inprogress.count(domain.operator const DNSName&())) {
       return;
     }
-    data->d_inprogress.insert(domain);
+    data->d_inprogress.insert(domain.operator const DNSName&());
   }
-  RemoveSentinel rs(domain, this); // this removes us from d_inprogress when we go out of scope
+  RemoveSentinel rs(domain.operator const DNSName&(), this); // this removes us from d_inprogress when we go out of scope
 
   string logPrefix = "XFR-in zone: '" + domain.toLogString() + "', primary: '" + remote.toString() + "', ";
 
@@ -760,9 +760,10 @@ void CommunicatorClass::suck(const DNSName& domain, const ComboAddress& remote, 
           rrs.reserve(axfr.size());
           for (const auto& dr : axfr) {
             auto rr = DNSResourceRecord::fromWire(dr);
-            (rr.qname += domain).makeUsLowerCase();
+            rr.qname += domain.operator const DNSName&();
+            rr.qname.makeUsLowerCase();
             rr.domain_id = zs.domain_id;
-            if (!processRecordForZS(domain, firstNSEC3, rr, zs))
+            if (!processRecordForZS(domain.operator const DNSName&(), firstNSEC3, rr, zs))
               continue;
             if (dr.d_type == QType::SOA) {
               auto sd = getRR<SOARecordContent>(dr);
@@ -781,7 +782,7 @@ void CommunicatorClass::suck(const DNSName& domain, const ComboAddress& remote, 
 
     if (rrs.empty()) {
       g_log << Logger::Notice << logPrefix << "starting AXFR" << endl;
-      rrs = doAxfr(remote, domain, tt, laddr, pdl, zs);
+      rrs = doAxfr(remote, domain.operator const DNSName&(), tt, laddr, pdl, zs);
       logPrefix = "A" + logPrefix; // XFR -> AXFR
       g_log << Logger::Notice << logPrefix << "retrieval finished" << endl;
     }
@@ -880,7 +881,7 @@ void CommunicatorClass::suck(const DNSName& domain, const ComboAddress& remote, 
         if (zs.nsset.count(shorter) && rr.qtype.getCode() != QType::DS)
           rr.auth = false;
 
-        if (shorter == domain) // stop at apex
+        if (shorter == domain.operator const DNSName&()) // stop at apex
           break;
       } while (shorter.chopOff());
 
@@ -927,7 +928,7 @@ void CommunicatorClass::suck(const DNSName& domain, const ComboAddress& remote, 
         else {
           // NSEC
           if (rr.auth || rr.qtype.getCode() == QType::NS) {
-            ordername = rr.qname.makeRelative(domain);
+            ordername = rr.qname.makeRelative(domain.operator const DNSName&());
             di.backend->feedRecord(rr, ordername);
           }
           else
@@ -941,7 +942,7 @@ void CommunicatorClass::suck(const DNSName& domain, const ComboAddress& remote, 
     // Insert empty non-terminals
     if (doent && !nonterm.empty()) {
       if (zs.isNSEC3) {
-        di.backend->feedEnts3(zs.domain_id, domain, nonterm, zs.ns3pr, zs.isNarrow);
+        di.backend->feedEnts3(zs.domain_id, domain.operator const DNSName&(), nonterm, zs.ns3pr, zs.isNarrow);
       }
       else
         di.backend->feedEnts(zs.domain_id, nonterm);
@@ -964,7 +965,7 @@ void CommunicatorClass::suck(const DNSName& domain, const ComboAddress& remote, 
       doNotify = (::arg().mustDo("secondary-do-renotify"));
     }
     if (doNotify) {
-      notifyDomain(domain, &B);
+      notifyDomain(domain.operator const DNSName&(), &B);
     }
   }
   catch (DBException& re) {
@@ -996,12 +997,12 @@ void CommunicatorClass::suck(const DNSName& domain, const ComboAddress& remote, 
       // failed secondary-checks. This will suspend secondary-checks (and subsequent AXFR) for this zone for some time.
       uint64_t newCount = 1;
       time_t now = time(nullptr);
-      const auto failedEntry = data->d_failedSecondaryRefresh.find(domain);
+      const auto failedEntry = data->d_failedSecondaryRefresh.find(domain.operator const DNSName&());
       if (failedEntry != data->d_failedSecondaryRefresh.end()) {
-        newCount = data->d_failedSecondaryRefresh[domain].first + 1;
+        newCount = data->d_failedSecondaryRefresh[domain.operator const DNSName&()].first + 1;
       }
       time_t nextCheck = now + std::min(newCount * d_tickinterval, (uint64_t)::arg().asNum("default-ttl"));
-      data->d_failedSecondaryRefresh[domain] = {newCount, nextCheck};
+      data->d_failedSecondaryRefresh[domain.operator const DNSName&()] = {newCount, nextCheck};
       g_log << Logger::Warning << logPrefix << "unable to xfr zone (ResolverException): " << re.reason << " (This was attempt number " << newCount << ". Excluding zone from secondary-checks until " << nextCheck << ")" << endl;
     }
     if (di.backend && transaction) {

@@ -692,9 +692,9 @@ public:
   DiscriminatedName(const DiscriminatedName &);
   DiscriminatedName(DiscriminatedName &&);
   DiscriminatedName(std::string_view);
-  DiscriminatedName(DNSName& name, const std::string_view suffix = ""sv) :
+  explicit DiscriminatedName(DNSName& name, const std::string_view suffix = ""sv) :
     d_name(name), d_discriminator(suffix) {}
-  DiscriminatedName(const DNSName& name, const std::string_view suffix = ""sv) :
+  explicit DiscriminatedName(const DNSName& name, const std::string_view suffix = ""sv) :
     d_name(const_cast<DNSName &>(name)), d_discriminator(suffix) {}
 
   DiscriminatedName& operator=(const DiscriminatedName&);

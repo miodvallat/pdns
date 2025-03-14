@@ -786,6 +786,51 @@ DiscriminatedName& DiscriminatedName::operator=(DiscriminatedName&& rhs)
   return *this;
 }
 
+bool DiscriminatedName::operator==(const DiscriminatedName& rhs) const
+{
+  if (hasDiscriminator() != rhs.hasDiscriminator()) {
+    return false;
+  }
+  if (hasDiscriminator() && d_discriminator != rhs.d_discriminator) {
+    return false;
+  }
+  return d_name == rhs.d_name;
+}
+
+bool DiscriminatedName::operator<(const DiscriminatedName& rhs) const
+{
+  // Order by DNSName first, by discriminator second.
+  // Unfortunately we can't use std::lexicographical_compare_three_way() yet
+  // (this would require C++20)
+  const auto *iter1 = d_name.d_storage.cbegin();
+  const auto *last1 = d_name.d_storage.cend();
+  const auto *iter2 = rhs.d_name.d_storage.cbegin();
+  const auto *last2 = rhs.d_name.d_storage.cend();
+  while (iter1 != last1 && iter2 != last2) {
+    auto char1 = dns_tolower(*iter1);
+    auto char2 = dns_tolower(*iter2);
+    if (char1 < char2) {
+      return true;
+    }
+    if (char1 > char2) {
+      return false;
+    }
+    ++iter1;
+    ++iter2;
+  }
+  if (iter1 == last1) {
+    if (iter2 != last2) {
+      return true; // our DNSName is shorter (subset) than the other
+    }
+  }
+  else {
+    return false; // our DNSName is longer (superset) than the other
+  }
+  // At this point, both DNSName compare equal, we have to compare
+  // discriminators (which are case-sensitive)
+  return d_discriminator < rhs.d_discriminator;
+}
+
 std::string DiscriminatedName::toString(const std::string& sep, const bool trailing) const
 {
   std::string ret = d_name.toString(sep, trailing);
@@ -814,7 +859,41 @@ std::string DiscriminatedName::toLogString() const
   return ret;
 }
 
+std::string DiscriminatedName::toStringNoDot() const
+{
+  std::string ret = d_name.toStringNoDot();
+  if (hasDiscriminator()) {
+    ret += separator;
+    ret += d_discriminator;
+  }
+  return ret;
+}
+
+std::string DiscriminatedName::toStringRootDot() const
+{
+  std::string ret = d_name.toStringRootDot();
+  if (hasDiscriminator()) {
+    ret += separator;
+    ret += d_discriminator;
+  }
+  return ret;
+}
+
+size_t DiscriminatedName::hash(size_t init) const
+{
+  if (hasDiscriminator()) {
+    init = burtleCI(reinterpret_cast<const unsigned char *>(d_discriminator.c_str()), d_discriminator.size(), init);
+  }
+  return d_name.hash(init);
+}
+
 std::ostream & operator<<(std::ostream &os, const DiscriminatedName& d)
 {
   return os <<d.toLogString();
 }
+
+size_t hash_value(DiscriminatedName const& name)
+{
+  return name.hash();
+}
+

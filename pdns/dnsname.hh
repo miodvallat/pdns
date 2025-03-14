@@ -78,6 +78,7 @@ inline unsigned char dns_tolower(unsigned char c)
 
 class DNSName
 {
+  friend class DiscriminatedName; // for d_storage access
 public:
   static const size_t s_maxDNSNameLength = 255;
 
@@ -699,6 +700,10 @@ public:
   DiscriminatedName& operator=(const DiscriminatedName&);
   DiscriminatedName& operator=(DiscriminatedName&&);
 
+  bool operator==(const DiscriminatedName& rhs) const;
+  bool operator!=(const DiscriminatedName& other) const { return !(*this == other); }
+  bool operator<(const DiscriminatedName& rhs) const;
+
   explicit operator DNSName() const { return d_name; }
   explicit operator DNSName&() { return d_name; }
   explicit operator const DNSName&() const { return d_name; }
@@ -709,11 +714,17 @@ public:
   std::string toString(const std::string& separator=".", const bool trailing=true) const;              //!< Our human-friendly, escaped, representation
   void toString(std::string& output, const std::string& separator=".", const bool trailing=true) const;
   std::string toLogString() const; //!< like plain toString, but returns (empty) on empty names
+  std::string toStringNoDot() const;
+  std::string toStringRootDot() const;
 
+  size_t hash(size_t init=0) const;
+
+  // Sugar
   size_t wirelength() const { return d_name.wirelength(); }
   bool chopOff() { return d_name.chopOff(); }
   bool isPartOf(const DNSName& rhs) const { return d_name.isPartOf(rhs); }
   bool isPartOf(const DiscriminatedName& rhs) const { return d_name.isPartOf(rhs.d_name); }
+  void trimToLabels(unsigned int limit) { d_name.trimToLabels(limit); }
 
 private:
   DNSName& d_name;
@@ -728,3 +739,5 @@ private:
 };
 
 std::ostream & operator<<(std::ostream &os, const DiscriminatedName& d);
+
+size_t hash_value(DiscriminatedName const& name);

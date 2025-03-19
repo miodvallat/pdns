@@ -266,7 +266,7 @@ DNSName apiNameToDNSName(const string& name)
   }
 }
 
-DNSName apiZoneIdToName(const string& identifier)
+ZoneName apiZoneIdToName(const string& identifier)
 {
   string zonename;
   ostringstream outputStringStream;
@@ -314,7 +314,7 @@ DNSName apiZoneIdToName(const string& identifier)
   zonename = outputStringStream.str();
 
   try {
-    return DNSName(zonename);
+    return ZoneName(zonename);
   }
   catch (...) {
     throw ApiException("Unable to parse DNS Name '" + zonename + "'");

@@ -206,7 +206,7 @@ static int usage(const std::string_view synopsis)
   return EXIT_FAILURE;
 }
 
-static bool rectifyZone(DNSSECKeeper& dk, const DNSName& zone, bool quiet = false, bool rectifyTransaction = true)
+static bool rectifyZone(DNSSECKeeper& dk, const ZoneName& zone, bool quiet = false, bool rectifyTransaction = true)
 {
   string output;
   string error;
@@ -287,7 +287,7 @@ static bool rectifyAllZones(DNSSECKeeper &dk, bool quiet = false)
   return result;
 }
 
-static int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vector<DNSResourceRecord>* suppliedrecords=nullptr) // NOLINT(readability-function-cognitive-complexity,readability-identifier-length)
+static int checkZone(DNSSECKeeper &dk, UeberBackend &B, const ZoneName& zone, const vector<DNSResourceRecord>* suppliedrecords=nullptr) // NOLINT(readability-function-cognitive-complexity,readability-identifier-length)
 {
   int numerrors=0;
   int numwarnings=0;
@@ -368,7 +368,7 @@ static int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, con
   }
 
   // Check for delegation in parent zone
-  DNSName parent(zone);
+  ZoneName parent(zone);
   while(parent.chopOff()) {
     SOAData sd_p;
     if(B.getSOAUncached(parent, sd_p)) {
@@ -901,7 +901,7 @@ static int checkAllZones(DNSSECKeeper &dk, bool exitOnError)
   multi_index_container<
     DomainInfo,
     indexed_by<
-      ordered_non_unique< member<DomainInfo,DNSName,&DomainInfo::zone>, CanonDNSNameCompare >,
+      ordered_non_unique< member<DomainInfo,ZoneName,&DomainInfo::zone>, CanonZoneNameCompare >,
       ordered_non_unique< member<DomainInfo,uint32_t,&DomainInfo::id> >
     >
   > seenInfos;
@@ -940,7 +940,7 @@ static int checkAllZones(DNSSECKeeper &dk, bool exitOnError)
   return EXIT_FAILURE;
 }
 
-static int increaseSerial(const DNSName& zone, DNSSECKeeper &dk)
+static int increaseSerial(const ZoneName& zone, DNSSECKeeper &dk)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   SOAData sd;
@@ -976,7 +976,7 @@ static int increaseSerial(const DNSName& zone, DNSSECKeeper &dk)
   sd.db->startTransaction(zone, -1);
 
   auto rrs = vector<DNSResourceRecord>{rr};
-  if (!sd.db->replaceRRSet(sd.domain_id, zone, rr.qtype, rrs)) {
+  if (!sd.db->replaceRRSet(sd.domain_id, DNSName(zone), rr.qtype, rrs)) {
     cerr << "Backend did not replace SOA record. Backend might not support this operation." << endl;
     sd.db->abortTransaction();
     return -1;
@@ -1004,7 +1004,7 @@ static int increaseSerial(const DNSName& zone, DNSSECKeeper &dk)
   return 0;
 }
 
-static int deleteZone(const DNSName &zone) {
+static int deleteZone(const ZoneName &zone) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
   if (! B.getDomainInfo(zone, di)) {
@@ -1109,7 +1109,7 @@ static int listKeys(const string &zname, DNSSECKeeper& dk){
 
   if (!zname.empty()) {
     DomainInfo di;
-    if(!B.getDomainInfo(DNSName(zname), di)) {
+    if(!B.getDomainInfo(ZoneName(zname), di)) {
       cerr << "Zone "<<zname<<" not found."<<endl;
       return EXIT_FAILURE;
     }
@@ -1126,7 +1126,7 @@ static int listKeys(const string &zname, DNSSECKeeper& dk){
   return EXIT_SUCCESS;
 }
 
-static int listZone(const DNSName &zone) {
+static int listZone(const ZoneName &zone) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
 
@@ -1188,7 +1188,7 @@ static int read1char(){
     return c;
 }
 
-static int clearZone(const DNSName &zone) {
+static int clearZone(const ZoneName &zone) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
 
@@ -1231,7 +1231,7 @@ private:
   bool d_colors;
 };
 
-static int editZone(const DNSName &zone, const PDNSColors& col) {
+static int editZone(const ZoneName &zone, const PDNSColors& col) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
   DNSSECKeeper dk(&B);
@@ -1493,7 +1493,7 @@ static int xcryptIP(const std::string& cmd, const std::string& ip, const std::st
 }
 #endif /* HAVE_IPCIPHER */
 
-static int zonemdVerifyFile(const DNSName& zone, const string& fname) {
+static int zonemdVerifyFile(const ZoneName& zone, const string& fname) {
   ZoneParserTNG zpt(fname, zone, "", true);
   zpt.setMaxGenerateSteps(::arg().asNum("max-generate-steps"));
 
@@ -1526,7 +1526,7 @@ static int zonemdVerifyFile(const DNSName& zone, const string& fname) {
   return EXIT_FAILURE;
 }
 
-static int loadZone(const DNSName& zone, const string& fname) {
+static int loadZone(const ZoneName& zone, const string& fname) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
 
@@ -1580,7 +1580,7 @@ static int loadZone(const DNSName& zone, const string& fname) {
   return EXIT_SUCCESS;
 }
 
-static int createZone(const DNSName &zone, const DNSName& nsname) {
+static int createZone(const ZoneName &zone, const DNSName& nsname) {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
   if (B.getDomainInfo(zone, di)) {
@@ -1648,12 +1648,12 @@ static int createZone(const DNSName &zone, const DNSName& nsname) {
 static int addOrReplaceRecord(bool isAdd, const vector<string>& cmds) {
   DNSResourceRecord rr;
   vector<DNSResourceRecord> newrrs;
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   DNSName name;
   if (cmds.at(2) == "@")
     name=zone;
   else
-    name = DNSName(cmds.at(2)) + zone;
+    name = DNSName(cmds.at(2)) + DNSName(zone);
 
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -1815,7 +1815,7 @@ static int deleteRRSet(const std::string& zone_, const std::string& name_, const
 {
   UtilBackend B; //NOLINT(readability-identifier-length)
   DomainInfo di;
-  DNSName zone(zone_);
+  ZoneName zone(zone_);
   if(!B.getDomainInfo(zone, di)) {
     cerr << "Zone '" << zone << "' does not exist" << endl;
     return EXIT_FAILURE;
@@ -1828,7 +1828,7 @@ static int deleteRRSet(const std::string& zone_, const std::string& name_, const
   if(name_=="@")
     name=zone;
   else
-    name=DNSName(name_)+zone;
+    name=DNSName(name_)+DNSName(zone);
 
   QType qt(QType::chartocode(type_.c_str()));
   di.backend->startTransaction(zone, -1);
@@ -1884,7 +1884,7 @@ static int listMemberZones(const string& catalog)
 
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
 
-  DNSName catz(catalog);
+  ZoneName catz(catalog);
   DomainInfo di;
   if (!B.getDomainInfo(catz, di)) {
     cerr << "Zone '" << catz << "' not found" << endl;
@@ -1930,10 +1930,10 @@ static bool testAlgorithms()
   return DNSCryptoKeyEngine::testAll();
 }
 
-static void testSpeed(const DNSName& zone, int cores)
+static void testSpeed(const ZoneName& zone, int cores)
 {
   DNSResourceRecord rr;
-  rr.qname=DNSName("blah")+zone;
+  rr.qname=DNSName("blah")+DNSName(zone);
   rr.qtype=QType::A;
   rr.ttl=3600;
   rr.auth=true;
@@ -1946,7 +1946,7 @@ static void testSpeed(const DNSName& zone, int cores)
     throw runtime_error("No backends available for DNSSEC key storage");
   }
 
-  ChunkedSigningPipe csp(DNSName(zone), true, cores, 100);
+  ChunkedSigningPipe csp(zone, true, cores, 100);
 
   vector<DNSZoneRecord> signatures;
   uint32_t rnd;
@@ -1961,7 +1961,7 @@ static void testSpeed(const DNSName& zone, int cores)
     rr.content=tmp;
 
     snprintf(tmp, sizeof(tmp), "r-%u", rnd);
-    rr.qname=DNSName(tmp)+zone;
+    rr.qname=DNSName(tmp)+DNSName(zone);
     DNSZoneRecord dzr;
     dzr.dr=DNSRecord(rr);
     if(csp.submit(dzr))
@@ -2015,7 +2015,7 @@ static void verifyCrypto(const string& zone)
   }
 }
 
-static bool disableDNSSECOnZone(DNSSECKeeper& dk, const DNSName& zone)
+static bool disableDNSSECOnZone(DNSSECKeeper& dk, const ZoneName& zone)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2033,7 +2033,7 @@ static bool disableDNSSECOnZone(DNSSECKeeper& dk, const DNSName& zone)
   return ret;
 }
 
-static int setZoneOptionsJson(const DNSName& zone, const string& options)
+static int setZoneOptionsJson(const ZoneName& zone, const string& options)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2049,7 +2049,7 @@ static int setZoneOptionsJson(const DNSName& zone, const string& options)
   return EXIT_SUCCESS;
 }
 
-static int setZoneOption(const DNSName& zone, const string& type, const string& option, const set<string>& values)
+static int setZoneOption(const ZoneName& zone, const string& type, const string& option, const set<string>& values)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2088,7 +2088,7 @@ static int setZoneOption(const DNSName& zone, const string& type, const string& 
   return EXIT_SUCCESS;
 }
 
-static int setZoneCatalog(const DNSName& zone, const DNSName& catalog)
+static int setZoneCatalog(const ZoneName& zone, const ZoneName& catalog)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2104,7 +2104,7 @@ static int setZoneCatalog(const DNSName& zone, const DNSName& catalog)
   return EXIT_SUCCESS;
 }
 
-static int setZoneAccount(const DNSName& zone, const string &account)
+static int setZoneAccount(const ZoneName& zone, const string &account)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2120,7 +2120,7 @@ static int setZoneAccount(const DNSName& zone, const string &account)
   return EXIT_SUCCESS;
 }
 
-static int setZoneKind(const DNSName& zone, const DomainInfo::DomainKind kind)
+static int setZoneKind(const ZoneName& zone, const DomainInfo::DomainKind kind)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2136,7 +2136,7 @@ static int setZoneKind(const DNSName& zone, const DomainInfo::DomainKind kind)
   return EXIT_SUCCESS;
 }
 
-static bool showZone(DNSSECKeeper& dnsseckeeper, const DNSName& zone, bool exportDS = false) // NOLINT(readability-function-cognitive-complexity)
+static bool showZone(DNSSECKeeper& dnsseckeeper, const ZoneName& zone, bool exportDS = false) // NOLINT(readability-function-cognitive-complexity)
 {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
@@ -2364,7 +2364,7 @@ static bool showZone(DNSSECKeeper& dnsseckeeper, const DNSName& zone, bool expor
   return true;
 }
 
-static bool secureZone(DNSSECKeeper& dk, const DNSName& zone)
+static bool secureZone(DNSSECKeeper& dk, const ZoneName& zone)
 {
   // temp var for addKey
   int64_t id{-1};
@@ -2453,7 +2453,7 @@ static bool secureZone(DNSSECKeeper& dk, const DNSName& zone)
   return true;
 }
 
-static int testSchema(DNSSECKeeper& dk, const DNSName& zone)
+static int testSchema(DNSSECKeeper& dk, const ZoneName& zone)
 {
   cout<<"Note: test-schema will try to create the zone, but it will not remove it."<<endl;
   cout<<"Please clean up after this."<<endl;
@@ -2525,7 +2525,7 @@ static int testSchema(DNSSECKeeper& dk, const DNSName& zone)
   db->feedRecord(rr, DNSName());
 
   rr.qtype=QType::A;
-  rr.qname=DNSName("_underscore")+zone;
+  rr.qname=DNSName("_underscore")+DNSName(zone);
   rr.content="127.0.0.1";
   db->feedRecord(rr, DNSName());
 
@@ -2539,9 +2539,9 @@ static int testSchema(DNSSECKeeper& dk, const DNSName& zone)
   rectifyZone(dk, zone);
   cout<<"Checking underscore ordering"<<endl;
   DNSName before, after;
-  db->getBeforeAndAfterNames(di.id, zone, DNSName("z")+zone, before, after);
+  db->getBeforeAndAfterNames(di.id, zone, DNSName("z")+DNSName(zone), before, after);
   cout<<"got '"<<before.toString()<<"' < 'z."<<zone.toString()<<"' < '"<<after.toString()<<"'"<<endl;
-  if(before != DNSName("_underscore")+zone)
+  if(before != DNSName("_underscore")+DNSName(zone))
   {
     cout<<"before is wrong, got '"<<before.toString()<<"', expected '_underscore."<<zone.toString()<<"', aborting"<<endl;
     return EXIT_FAILURE;
@@ -2579,7 +2579,7 @@ static int testSchema(DNSSECKeeper& dk, const DNSName& zone)
   return EXIT_SUCCESS;
 }
 
-static int addOrSetMeta(const DNSName& zone, const string& kind, const vector<string>& values, bool clobber) {
+static int addOrSetMeta(const ZoneName& zone, const string& kind, const vector<string>& values, bool clobber) {
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di;
 
@@ -2750,7 +2750,7 @@ static int zonemdVerifyFile(vector<string>& cmds, const std::string_view synopsi
     cmds[1].clear();
   }
 
-  return zonemdVerifyFile(DNSName(cmds[1]), cmds[2]);
+  return zonemdVerifyFile(ZoneName(cmds[1]), cmds[2]);
 }
 
 
@@ -2761,7 +2761,7 @@ static int testSchema(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  return testSchema(dk, DNSName(cmds.at(1)));
+  return testSchema(dk, ZoneName(cmds.at(1)));
 }
 
 static int rectifyZone(vector<string>& cmds, const std::string_view synopsis)
@@ -2772,7 +2772,7 @@ static int rectifyZone(vector<string>& cmds, const std::string_view synopsis)
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
   int exitCode = 0;
   for(unsigned int n = 1; n < cmds.size(); ++n) { // NOLINT(readability-identifier-length)
-    if (!rectifyZone(dk, DNSName(cmds.at(n)))) {
+    if (!rectifyZone(dk, ZoneName(cmds.at(n)))) {
       exitCode = 1;
     }
   }
@@ -2796,7 +2796,7 @@ static int checkZone(vector<string>& cmds, const std::string_view synopsis)
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
   UtilBackend B("default"); // NOLINT(readability-identifier-length)
-  return checkZone(dk, B, DNSName(cmds.at(1)));
+  return checkZone(dk, B, ZoneName(cmds.at(1)));
 }
 
 static int benchDb(vector<string>& cmds, [[maybe_unused]] const std::string_view synopsis)
@@ -2836,7 +2836,7 @@ static int testSpeed(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() < 3) {
     return usage(synopsis);
   }
-  testSpeed(DNSName(cmds.at(1)), pdns::checked_stoi<int>(cmds.at(2)));
+  testSpeed(ZoneName(cmds.at(1)), pdns::checked_stoi<int>(cmds.at(2)));
   return 0;
 }
 
@@ -2855,7 +2855,7 @@ static int showZone(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!showZone(dk, DNSName(cmds.at(1)))) {
+  if (!showZone(dk, ZoneName(cmds.at(1)))) {
     return 1;
   }
   return 0;
@@ -2867,7 +2867,7 @@ static int exportZoneDS(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!showZone(dk, DNSName(cmds.at(1)), true)) {
+  if (!showZone(dk, ZoneName(cmds.at(1)), true)) {
     return 1;
   }
   return 0;
@@ -2879,7 +2879,7 @@ static int disableDNSSEC(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   if(!disableDNSSECOnZone(dk, zone)) {
     cerr << "Cannot disable DNSSEC on " << zone << endl;
     return 1;
@@ -2892,7 +2892,7 @@ static int activateZoneKey(vector<string>& cmds, const std::string_view synopsis
   if(cmds.size() != 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   // NOLINTNEXTLINE(readability-identifier-length)
   unsigned int id = atoi(cmds.at(2).c_str()); // if you make this pdns::checked_stoi, the error gets worse
   if(id == 0)
@@ -2919,7 +2919,7 @@ static int deactivateZoneKey(vector<string>& cmds, const std::string_view synops
   if(cmds.size() != 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   auto id = pdns::checked_stoi<unsigned int>(cmds.at(2)); // NOLINT(readability-identifier-length)
   if(id == 0)
   {
@@ -2945,7 +2945,7 @@ static int publishZoneKey(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() != 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   // NOLINTNEXTLINE(readability-identifier-length)
   unsigned int id = atoi(cmds.at(2).c_str()); // if you make this pdns::checked_stoi, the error gets worse
   if(id == 0)
@@ -2972,7 +2972,7 @@ static int unpublishZoneKey(vector<string>& cmds, const std::string_view synopsi
   if(cmds.size() != 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   // NOLINTNEXTLINE(readability-identifier-length)
   unsigned int id = atoi(cmds.at(2).c_str()); // if you make this pdns::checked_stoi, the error gets worse
   if(id == 0)
@@ -2994,7 +2994,7 @@ static int unpublishZoneKey(vector<string>& cmds, const std::string_view synopsi
   return 0;
 }
 
-static int checkZoneKey(DNSSECKeeper &dsk, DNSName &zone, int64_t keyId)
+static int checkZoneKey(DNSSECKeeper &dsk, ZoneName &zone, int64_t keyId)
 {
   if (keyId == -1) {
     cerr<<std::to_string(keyId)<<": Key was added, but backend does not support returning of key id"<<endl;
@@ -3020,7 +3020,7 @@ static int addZoneKey(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
 
   UtilBackend B("default"); //NOLINT(readability-identifier-length)
   DomainInfo di; //NOLINT(readability-identifier-length)
@@ -3125,7 +3125,7 @@ static int removeZoneKey(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   auto id = pdns::checked_stoi<unsigned int>(cmds.at(2)); // NOLINT(readability-identifier-length)
   if (!dk.removeKey(zone, id)) {
      cerr<<"Cannot remove key " << id << " from " << zone <<endl;
@@ -3139,7 +3139,7 @@ static int deleteZone(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() != 2) {
     return usage(synopsis);
   }
-  return deleteZone(DNSName(cmds.at(1)));
+  return deleteZone(ZoneName(cmds.at(1)));
 }
 
 static int createZone(vector<string>& cmds, const std::string_view synopsis)
@@ -3147,7 +3147,7 @@ static int createZone(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() != 2 && cmds.size()!=3 ) {
     return usage(synopsis);
   }
-  return createZone(DNSName(cmds.at(1)), cmds.size() > 2 ? DNSName(cmds.at(2)) : DNSName());
+  return createZone(ZoneName(cmds.at(1)), cmds.size() > 2 ? DNSName(cmds.at(2)) : DNSName());
 }
 
 static int createSecondaryZone(vector<string>& cmds, const std::string_view synopsis)
@@ -3157,7 +3157,7 @@ static int createSecondaryZone(vector<string>& cmds, const std::string_view syno
   }
   UtilBackend B; // NOLINT(readability-identifier-length)
   DomainInfo di; // NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   if (B.getDomainInfo(zone, di)) {
     cerr << "Zone '" << zone << "' exists already" << endl;
     return EXIT_FAILURE;
@@ -3182,7 +3182,7 @@ static int changeSecondaryZonePrimary(vector<string>& cmds, const std::string_vi
   }
   UtilBackend B; // NOLINT(readability-identifier-length)
   DomainInfo di; // NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   if (!B.getDomainInfo(zone, di)) {
     cerr << "Zone '" << zone << "' doesn't exist" << endl;
     return EXIT_FAILURE;
@@ -3256,7 +3256,7 @@ static int listZone(vector<string>& cmds, const std::string_view synopsis)
     cmds.at(1).clear();
   }
 
-  return listZone(DNSName(cmds.at(1)));
+  return listZone(ZoneName(cmds.at(1)));
 }
 
 static int editZone(vector<string>& cmds, const std::string_view synopsis)
@@ -3269,7 +3269,7 @@ static int editZone(vector<string>& cmds, const std::string_view synopsis)
   }
 
   PDNSColors col(g_vm.count("no-colors") != 0);
-  return editZone(DNSName(cmds.at(1)), col);
+  return editZone(ZoneName(cmds.at(1)), col);
 }
 
 static int clearZone(vector<string>& cmds, const std::string_view synopsis)
@@ -3281,7 +3281,7 @@ static int clearZone(vector<string>& cmds, const std::string_view synopsis)
     cmds.at(1).clear();
   }
 
-  return clearZone(DNSName(cmds.at(1)));
+  return clearZone(ZoneName(cmds.at(1)));
 }
 
 static int listKeys(vector<string>& cmds, const std::string_view synopsis)
@@ -3307,7 +3307,7 @@ static int loadZone(vector<string>& cmds, const std::string_view synopsis)
   }
 
   for(size_t n=1; n + 2 <= cmds.size(); n+=2) { // NOLINT(readability-identifier-length)
-    int ret = loadZone(DNSName(cmds.at(n)), cmds.at(n + 1));
+    int ret = loadZone(ZoneName(cmds.at(n)), cmds.at(n + 1));
     if (ret != 0) {
       return ret;
     }
@@ -3321,10 +3321,10 @@ static int secureZone(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  vector<DNSName> mustRectify;
+  vector<ZoneName> mustRectify;
   unsigned int zoneErrors=0;
   for(unsigned int n = 1; n < cmds.size(); ++n) { // NOLINT(readability-identifier-length)
-    DNSName zone(cmds.at(n));
+    ZoneName zone(cmds.at(n));
     dk.startTransaction(zone, -1);
     if(secureZone(dk, zone)) {
       mustRectify.push_back(std::move(zone));
@@ -3388,7 +3388,7 @@ static int setKind(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() != 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   auto kind = DomainInfo::stringToKind(cmds.at(2));
   return setZoneKind(zone, kind);
 }
@@ -3409,7 +3409,7 @@ static int setOptionsJson(vector<string>& cmds, const std::string_view synopsis)
     }
   }
 
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
 
   return setZoneOptionsJson(zone, cmds.at(2));
 }
@@ -3423,7 +3423,7 @@ static int setOption(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
 
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   set<string> values;
   for (unsigned int n = 4; n < cmds.size(); ++n) { // NOLINT(readability-identifier-length)
     if (!cmds.at(n).empty()) {
@@ -3439,10 +3439,10 @@ static int setCatalog(vector<string>& cmds, const std::string_view synopsis)
   if (cmds.size() < 2) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
-  DNSName catalog; // Create an empty DNSName()
+  ZoneName zone(cmds.at(1));
+  ZoneName catalog; // Create an empty ZoneName()
   if (cmds.size() > 2 && !cmds.at(2).empty()) {
-    catalog = DNSName(cmds.at(2));
+    catalog = ZoneName(cmds.at(2));
   }
   return setZoneCatalog(zone, catalog);
 }
@@ -3452,7 +3452,7 @@ static int setAccount(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() != 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   return setZoneAccount(zone, cmds.at(2));
 }
 
@@ -3466,7 +3466,7 @@ static int setNsec3(vector<string>& cmds, const std::string_view synopsis)
   NSEC3PARAMRecordContent ns3pr(nsec3params);
 
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   if (zone.wirelength() > 222) {
     cerr<<"Cannot enable NSEC3 for " << zone << " as it is too long (" << zone.wirelength() << " bytes, maximum is 222 bytes)"<<endl;
     return 1;
@@ -3503,7 +3503,7 @@ static int setPresigned(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!dk.setPresigned(DNSName(cmds.at(1)))) {
+  if (!dk.setPresigned(ZoneName(cmds.at(1)))) {
     cerr << "Could not set presigned for " << cmds.at(1) << " (is DNSSEC enabled in your backend?)" << endl;
     return 1;
   }
@@ -3516,7 +3516,7 @@ static int setPublishCDNSKey(vector<string>& cmds, const std::string_view synops
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!dk.setPublishCDNSKEY(DNSName(cmds.at(1)), (cmds.size() == 3 && cmds.at(2) == "delete"))) {
+  if (!dk.setPublishCDNSKEY(ZoneName(cmds.at(1)), (cmds.size() == 3 && cmds.at(2) == "delete"))) {
     cerr << "Could not set publishing for CDNSKEY records for " << cmds.at(1) << endl;
     return 1;
   }
@@ -3535,7 +3535,7 @@ static int setPublishCDs(vector<string>& cmds, const std::string_view synopsis)
   }
 
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!dk.setPublishCDS(DNSName(cmds.at(1)), cmds.at(2))) {
+  if (!dk.setPublishCDS(ZoneName(cmds.at(1)), cmds.at(2))) {
     cerr << "Could not set publishing for CDS records for " << cmds.at(1) << endl;
     return 1;
   }
@@ -3548,7 +3548,7 @@ static int unsetPresigned(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!dk.unsetPresigned(DNSName(cmds.at(1)))) {
+  if (!dk.unsetPresigned(ZoneName(cmds.at(1)))) {
     cerr << "Could not unset presigned on for " << cmds.at(1) << endl;
     return 1;
   }
@@ -3561,7 +3561,7 @@ static int unsetPublishCDNSKey(vector<string>& cmds, const std::string_view syno
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!dk.unsetPublishCDNSKEY(DNSName(cmds.at(1)))) {
+  if (!dk.unsetPublishCDNSKEY(ZoneName(cmds.at(1)))) {
     cerr << "Could not unset publishing for CDNSKEY records for " << cmds.at(1) << endl;
     return 1;
   }
@@ -3574,7 +3574,7 @@ static int unsetPublishCDs(vector<string>& cmds, const std::string_view synopsis
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!dk.unsetPublishCDS(DNSName(cmds.at(1)))) {
+  if (!dk.unsetPublishCDS(ZoneName(cmds.at(1)))) {
     cerr << "Could not unset publishing for CDS records for " << cmds.at(1) << endl;
     return 1;
   }
@@ -3587,7 +3587,7 @@ static int hashZoneRecord(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   DNSName record(cmds.at(2));
   NSEC3PARAMRecordContent ns3pr;
   bool narrow = false;
@@ -3609,7 +3609,7 @@ static int unsetNSec3(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  if (!dk.unsetNSEC3PARAM(DNSName(cmds.at(1)))) {
+  if (!dk.unsetNSEC3PARAM(ZoneName(cmds.at(1)))) {
     cerr << "Cannot unset NSEC3 param for " << cmds.at(1) << endl;
     return 1;
   }
@@ -3627,7 +3627,7 @@ static int exportZoneKey(vector<string>& cmds, const std::string_view synopsis)
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
   string zone = cmds.at(1);
   auto id = pdns::checked_stoi<unsigned int>(cmds.at(2)); // NOLINT(readability-identifier-length)
-  DNSSECPrivateKey dpk = dk.getKeyById(DNSName(zone), id);
+  DNSSECPrivateKey dpk = dk.getKeyById(ZoneName(zone), id);
   cout << dpk.getKey()->convertToISC() << endl;
   return 0;
 }
@@ -3641,7 +3641,7 @@ static int exportZoneKeyPEM(vector<string>& cmds, const std::string_view synopsi
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
   string zone = cmds.at(1);
   auto id = pdns::checked_stoi<unsigned int>(cmds.at(2)); // NOLINT(readability-identifier-length)
-  DNSSECPrivateKey dpk = dk.getKeyById(DNSName(zone), id);
+  DNSSECPrivateKey dpk = dk.getKeyById(ZoneName(zone), id);
   dpk.getKey()->convertToPEMFile(*stdout);
   return 0;
 }
@@ -3652,7 +3652,7 @@ static int increaseSerial(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  return increaseSerial(DNSName(cmds.at(1)), dk);
+  return increaseSerial(ZoneName(cmds.at(1)), dk);
 }
 
 static int importZoneKeyPEM(vector<string>& cmds, const std::string_view synopsis)
@@ -3661,7 +3661,7 @@ static int importZoneKeyPEM(vector<string>& cmds, const std::string_view synopsi
     return usage(synopsis);
   }
 
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   const string filename = cmds.at(2);
   const auto algorithm = pdns::checked_stoi<unsigned int>(cmds.at(3));
 
@@ -3721,7 +3721,7 @@ static int importZoneKey(vector<string>& cmds, const std::string_view synopsis)
   if(cmds.size() < 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   string fname = cmds.at(2);
   DNSKEYRecordContent drc;
   shared_ptr<DNSCryptoKeyEngine> key(DNSCryptoKeyEngine::makeFromISCFile(drc, fname.c_str()));
@@ -3778,7 +3778,7 @@ static int exportZoneDNSKey(vector<string>& cmds, const std::string_view synopsi
   }
 
   DNSSECKeeper dk; //NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   auto id = pdns::checked_stoi<unsigned int>(cmds.at(2)); // NOLINT(readability-identifier-length)
   DNSSECPrivateKey dpk=dk.getKeyById(zone, id);
   cout << zone<<" IN DNSKEY "<<dpk.getDNSKEY().getZoneRepresentation() <<endl;
@@ -3929,7 +3929,7 @@ static int activateTSIGKey(vector<string>& cmds, const std::string_view synopsis
   if (cmds.size() < 4) {
     return usage(synopsis);
   }
-  DNSName zname(cmds.at(1));
+  ZoneName zname(cmds.at(1));
   string name = cmds.at(2);
   if (cmds.at(3) == "primary" || cmds.at(3) == "producer") {
     metaKey = "TSIG-ALLOW-AXFR";
@@ -3977,7 +3977,7 @@ static int deactivateTSIGKey(vector<string>& cmds, const std::string_view synops
   if (cmds.size() < 4) {
     return usage(synopsis);
   }
-  DNSName zname(cmds.at(1));
+  ZoneName zname(cmds.at(1));
   string name = cmds.at(2);
   if (cmds.at(3) == "primary" || cmds.at(3) == "producer") {
     metaKey = "TSIG-ALLOW-AXFR";
@@ -4025,7 +4025,7 @@ static int getMeta(vector<string>& cmds, const std::string_view synopsis)
     return usage(synopsis);
   }
   UtilBackend B("default"); // NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   vector<string> keys;
 
   DomainInfo di; // NOLINT(readability-identifier-length)
@@ -4060,7 +4060,7 @@ static int setMeta(vector<string>& cmds, const std::string_view synopsis)
   if (cmds.size() < 3) {
     return usage(synopsis);
   }
-  DNSName zone(cmds.at(1));
+  ZoneName zone(cmds.at(1));
   string kind = cmds.at(2);
   const static std::array<string, 7> multiMetaWhitelist = {"ALLOW-AXFR-FROM", "ALLOW-DNSUPDATE-FROM",
     "ALSO-NOTIFY", "TSIG-ALLOW-AXFR", "TSIG-ALLOW-DNSUPDATE", "GSS-ALLOW-AXFR-PRINCIPAL",
@@ -4090,7 +4090,7 @@ static int HSMAssign(vector<string>& cmds, const std::string_view synopsis)
   }
 
   UtilBackend B("default"); // NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(2));
+  ZoneName zone(cmds.at(2));
 
   // verify zone
   if (!B.getDomainInfo(zone, di)) {
@@ -4171,7 +4171,7 @@ static int HSMCreateKey(vector<string>& cmds, const std::string_view synopsis)
   }
   UtilBackend B("default"); // NOLINT(readability-identifier-length)
   DomainInfo di; // NOLINT(readability-identifier-length)
-  DNSName zone(cmds.at(2));
+  ZoneName zone(cmds.at(2));
   unsigned int id{0}; // NOLINT(readability-identifier-length)
   int bits = 2048;
   // verify zone

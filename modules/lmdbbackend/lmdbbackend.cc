@@ -856,17 +856,20 @@ namespace serialization
   }
 
   template <class Archive>
-  void save(Archive& arc, const ZoneName& zone, const unsigned int version)
+  void save(Archive& arc, const ZoneName& zone, const unsigned int /* version */)
   {
-    save(arc, zone.operator const DNSName&(), version);
+    arc & zone.operator const DNSName&();
+    arc & zone.getDiscriminator();
   }
 
   template <class Archive>
-  void load(Archive& arc, ZoneName& zone, const unsigned int version)
+  void load(Archive& arc, ZoneName& zone, const unsigned int /* version */)
   {
     DNSName tmp;
-    load(arc, tmp, version);
-    zone = ZoneName(tmp);
+    std::string disc;
+    arc & tmp;
+    arc & disc;
+    zone = ZoneName(tmp, disc);
   }
 
   template <class Archive>

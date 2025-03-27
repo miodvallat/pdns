@@ -11,6 +11,7 @@ Pipe Backend
 * DNSSEC: No
 * Disabled data: No
 * Comments: No
+* Views: No
 * API: Read-only
 * Multiple instances: Yes
 * Zone caching: No

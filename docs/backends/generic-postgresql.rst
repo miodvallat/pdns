@@ -11,6 +11,7 @@ Generic PostgreSQL backend
 * DNSSEC: Yes (set ``gpgsql-dnssec``)
 * Disabled data: Yes
 * Comments: Yes
+* Views: No
 * API: Read-Write
 * Multiple instances: yes
 * Zone caching: Yes

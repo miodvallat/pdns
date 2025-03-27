@@ -2667,6 +2667,133 @@ static void prometheusMetrics(HttpRequest* /* req */, HttpResponse* resp)
   resp->status = 200;
 }
 
+// Views
+
+// Serialize a list of ZoneName as a JSON array of strings
+static void jsonFillZoneNameArray(Json::array& array, std::vector<ZoneName>& zones)
+{
+  for (const auto& zone : zones) {
+    array.emplace_back(zone.toString());
+  }
+}
+
+// GET /views           returns the list of all views (tags)
+static void apiServerViewsAllGET(HttpRequest* /* req */, HttpResponse* resp)
+{
+  std::vector<std::string> views;
+  UeberBackend backend;
+
+  backend.viewList(views);
+
+  Json::object jsonresult{
+    {"views", std::move(views)}};
+  resp->setJsonBody(jsonresult);
+}
+
+// GET /views/<tag>     returns the list of all ZoneName in the given "tag" view
+static void apiServerViewsGET(HttpRequest* req, HttpResponse* resp)
+{
+  std::string tag{req->parameters["tag"]};
+  std::vector<ZoneName> views;
+  UeberBackend backend;
+
+  backend.viewListZones(tag, views);
+
+  Json::array jsonarray;
+  jsonFillZoneNameArray(jsonarray, views);
+  Json::object jsonresult{
+    {"views", jsonarray}};
+  resp->setJsonBody(jsonresult);
+}
+
+// POST /views/<tag> + name in json adds ZoneName "name" to view "tag"
+static void apiServerViewsPOST(HttpRequest* req, HttpResponse* resp)
+{
+  UeberBackend backend;
+  DomainInfo domainInfo;
+  const auto& document = req->json();
+  ZoneName zonename = ZoneName(apiNameToDNSName(stringFromJson(document, "name")));
+
+  if (!backend.getDomainInfo(zonename, domainInfo)) {
+    throw HttpNotFoundException(); // zone name not found
+  }
+  std::string tag{req->parameters["tag"]};
+
+  if (!domainInfo.backend->viewAddZone(tag, zonename)) {
+    throw ApiException("Failed to add " + zonename.toString() + " to view " + tag);
+  }
+
+  resp->body = "";
+  resp->status = 201;
+}
+
+// DELETE /views/<tag>/<id>     removes ZoneName "id" from view "tag"
+static void apiServerViewsDELETE(HttpRequest* req, HttpResponse* resp)
+{
+  ZoneData zoneData{req};
+  std::string tag{req->parameters["tag"]};
+
+  if (!zoneData.domainInfo.backend->viewDelZone(tag, zoneData.zoneName)) {
+    throw ApiException("Failed to remove " + zoneData.zoneName.toString() + " from view " + tag);
+  }
+
+  resp->body = "";
+  resp->status = 204;
+}
+
+// Networks
+
+// GET /networks                return the list of all registered networks and views (only one view per network)
+// GET /networks/<ip>/<netmask> return the name of the view for the given network
+static void apiServerNetworksGET(HttpRequest* req, HttpResponse* resp)
+{
+  std::string networkRepresentation{};
+  if (req->parameters.count("ip") != 0 && req->parameters.count("netmask") != 0) {
+    std::string subnet{req->parameters["ip"]};
+    std::string netmask{req->parameters["netmask"]};
+    networkRepresentation = subnet + "/" + netmask;
+  }
+  Netmask network(networkRepresentation);
+
+  UeberBackend backend;
+  std::vector<pair<Netmask, string>> networks;
+  backend.networkList(networks);
+  Json::array jsonarray;
+  Json::object item;
+  for (const auto& pair : networks) {
+    if (!networkRepresentation.empty() && !(pair.first == network)) {
+      continue;
+    }
+    item["network"] = pair.first.toString();
+    item["tag"] = pair.second;
+    jsonarray.emplace_back(item);
+    item.clear();
+  }
+
+  Json::object jsonresult{
+    {"networks", std::move(jsonarray)}};
+  resp->setJsonBody(jsonresult);
+}
+
+// PUT /networks/<ip>/<netmask> sets the name of the view for the given network
+static void apiServerNetworksPUT(HttpRequest* req, HttpResponse* resp)
+{
+  std::string subnet{req->parameters["ip"]};
+  std::string netmask{req->parameters["netmask"]};
+  Netmask network(subnet + "/" + netmask);
+
+  const auto& document = req->json();
+  std::string tag = stringFromJson(document, "tag");
+
+  UeberBackend backend;
+  if (!backend.networkSet(network, tag)) {
+    throw ApiException("Failed to setup view " + tag + " for network " + network.toString());
+  }
+
+  resp->body = "";
+  resp->status = 201;
+}
+
 static void cssfunction(HttpRequest* /* req */, HttpResponse* resp)
 {
   resp->headers["Cache-Control"] = "max-age=86400";
@@ -2761,6 +2888,24 @@ void AuthWebServer::webThread()
       d_ws->registerApiHandler(url, apiServerTSIGKeyDetailDELETE, "DELETE");
       d_ws->registerApiHandler(url, apiServerTSIGKeyDetailGET, "GET");
       d_ws->registerApiHandler(url, apiServerTSIGKeyDetailPUT, "PUT");
+
+      // Views
+      url.resize(urlLen);
+      url += "/views";
+      d_ws->registerApiHandler(url, apiServerViewsAllGET, "GET");
+      url += "/<tag>";
+      d_ws->registerApiHandler(url, apiServerViewsGET, "GET");
+      d_ws->registerApiHandler(url, apiServerViewsPOST, "POST");
+      url += "/<id>";
+      d_ws->registerApiHandler(url, apiServerViewsDELETE, "DELETE");
+
+      // Networks
+      url.resize(urlLen);
+      url += "/networks";
+      d_ws->registerApiHandler(url, apiServerNetworksGET, "GET");
+      url += "/<ip>/<netmask>";
+      d_ws->registerApiHandler(url, apiServerNetworksGET, "GET");
+      d_ws->registerApiHandler(url, apiServerNetworksPUT, "PUT");
 
       // Zones
       url.resize(urlLen);

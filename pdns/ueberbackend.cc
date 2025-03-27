@@ -862,6 +862,20 @@ bool UeberBackend::deleteTSIGKey(const DNSName& name)
   return false;
 }
 
+void UeberBackend::viewList(vector<string>& result)
+{
+  for (auto& backend : backends) {
+    (void)backend->viewList(result);
+  }
+}
+
+void UeberBackend::viewListZones(const string& view, vector<ZoneName>& result)
+{
+  for (auto& backend : backends) {
+    (void)backend->viewListZones(view, result);
+  }
+}
+
 bool UeberBackend::networkSet(const Netmask& net, std::string& tag)
 {
   for (auto& backend : backends) {

@@ -2820,11 +2820,11 @@ void AuthWebServer::webThread()
 
       d_ws->registerApiHandler(url, apiDiscovery, "GET");
 
-      auto urlLen = url.length();
+      auto urlLen = url.length(); // used to "backtrack"
       url += "/docs";
       d_ws->registerApiHandler(url, apiDocs, "GET");
 
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api
       url += "/v1";
       d_ws->registerApiHandler(url, apiDiscoveryV1, "GET");
       url += "/servers";
@@ -2838,22 +2838,22 @@ void AuthWebServer::webThread()
       d_ws->registerApiHandler(url, apiServerCacheFlush, "PUT");
 
       // Config
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/config";
       d_ws->registerApiHandler(url, apiServerConfig, "GET");
 
       // Search data
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/search-data";
       d_ws->registerApiHandler(url, apiServerSearchData, "GET");
 
       // Statistics
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/statistics";
       d_ws->registerApiHandler(url, apiServerStatistics, "GET");
 
       // Autoprimaries
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/autoprimaries";
       d_ws->registerApiHandler(url, apiServerAutoprimariesGET, "GET");
       d_ws->registerApiHandler(url, apiServerAutoprimariesPOST, "POST");
@@ -2861,7 +2861,7 @@ void AuthWebServer::webThread()
       d_ws->registerApiHandler(url, apiServerAutoprimaryDetailDELETE, "DELETE");
 
       // TSIG Keys
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/tsigkeys";
       d_ws->registerApiHandler(url, apiServerTSIGKeysGET, "GET");
       d_ws->registerApiHandler(url, apiServerTSIGKeysPOST, "POST");
@@ -2871,7 +2871,7 @@ void AuthWebServer::webThread()
       d_ws->registerApiHandler(url, apiServerTSIGKeyDetailPUT, "PUT");
 
       // Views
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/views";
       d_ws->registerApiHandler(url, apiServerViewsAllGET, "GET");
       url += "/<tag>";
@@ -2881,7 +2881,7 @@ void AuthWebServer::webThread()
       d_ws->registerApiHandler(url, apiServerViewsDELETE, "DELETE");
 
       // Networks
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/networks";
       d_ws->registerApiHandler(url, apiServerNetworksGET, "GET");
       url += "/<ip>/<netmask>";
@@ -2889,7 +2889,7 @@ void AuthWebServer::webThread()
       d_ws->registerApiHandler(url, apiServerNetworksPUT, "PUT");
 
       // Zones
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/zones";
       d_ws->registerApiHandler(url, apiServerZonesGET, "GET");
       d_ws->registerApiHandler(url, apiServerZonesPOST, "POST");
@@ -2901,7 +2901,7 @@ void AuthWebServer::webThread()
       urlLen = url.length();
       url += "/axfr-retrieve";
       d_ws->registerApiHandler(url, apiServerZoneAxfrRetrieve, "PUT");
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost/zones/<id>
       url += "/cryptokeys";
       d_ws->registerApiHandler(url, apiZoneCryptokeysGET, "GET");
       d_ws->registerApiHandler(url, apiZoneCryptokeysPOST, "POST");
@@ -2910,10 +2910,10 @@ void AuthWebServer::webThread()
       d_ws->registerApiHandler(url, apiZoneCryptokeysGET, "GET");
       d_ws->registerApiHandler(url, apiZoneCryptokeysPOST, "POST");
       d_ws->registerApiHandler(url, apiZoneCryptokeysPUT, "PUT");
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost/zones/<id>
       url += "/export";
       d_ws->registerApiHandler(url, apiServerZoneExport, "GET");
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost/zones/<id>
       url += "/metadata";
       d_ws->registerApiHandler(url, apiZoneMetadataGET, "GET");
       d_ws->registerApiHandler(url, apiZoneMetadataPOST, "POST");
@@ -2921,10 +2921,10 @@ void AuthWebServer::webThread()
       d_ws->registerApiHandler(url, apiZoneMetadataKindDELETE, "DELETE");
       d_ws->registerApiHandler(url, apiZoneMetadataKindGET, "GET");
       d_ws->registerApiHandler(url, apiZoneMetadataKindPUT, "PUT");
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost/zones/<id>
       url += "/notify";
       d_ws->registerApiHandler(url, apiServerZoneNotify, "PUT");
-      url.resize(urlLen);
+      url.resize(urlLen); // back to /api/v1/servers/localhost/zones/<id>
       url += "/rectify";
       d_ws->registerApiHandler(url, apiServerZoneRectify, "PUT");
     }

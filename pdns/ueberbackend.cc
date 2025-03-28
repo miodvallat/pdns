@@ -865,14 +865,14 @@ bool UeberBackend::deleteTSIGKey(const DNSName& name)
 void UeberBackend::viewList(vector<string>& result)
 {
   for (auto& backend : backends) {
-    (void)backend->viewList(result);
+    backend->viewList(result);
   }
 }
 
 void UeberBackend::viewListZones(const string& view, vector<ZoneName>& result)
 {
   for (auto& backend : backends) {
-    (void)backend->viewListZones(view, result);
+    backend->viewListZones(view, result);
   }
 }
 

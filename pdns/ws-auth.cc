@@ -2690,23 +2690,23 @@ static void apiServerViewsAllGET(HttpRequest* /* req */, HttpResponse* resp)
   resp->setJsonBody(jsonresult);
 }
 
-// GET /views/<tag>     returns the list of all ZoneName in the given "tag" view
+// GET /views/<view>     returns the list of all ZoneName in the given "view" view
 static void apiServerViewsGET(HttpRequest* req, HttpResponse* resp)
 {
-  std::string tag{req->parameters["tag"]};
+  std::string view{req->parameters["view"]};
   std::vector<ZoneName> views;
   UeberBackend backend;
 
-  backend.viewListZones(tag, views);
+  backend.viewListZones(view, views);
 
   Json::array jsonarray;
   jsonFillZoneNameArray(jsonarray, views);
   Json::object jsonresult{
-    {"views", jsonarray}};
+    {"zones", jsonarray}};
   resp->setJsonBody(jsonresult);
 }
 
-// POST /views/<tag> + name in json adds ZoneName "name" to view "tag"
+// POST /views/<view> + name in json adds ZoneName "name" to view "view"
 static void apiServerViewsPOST(HttpRequest* req, HttpResponse* resp)
 {
   UeberBackend backend;
@@ -2717,24 +2717,24 @@ static void apiServerViewsPOST(HttpRequest* req, HttpResponse* resp)
   if (!backend.getDomainInfo(zonename, domainInfo)) {
     throw HttpNotFoundException(); // zone name not found
   }
-  std::string tag{req->parameters["tag"]};
+  std::string view{req->parameters["view"]};
 
-  if (!domainInfo.backend->viewAddZone(tag, zonename)) {
-    throw ApiException("Failed to add " + zonename.toString() + " to view " + tag);
+  if (!domainInfo.backend->viewAddZone(view, zonename)) {
+    throw ApiException("Failed to add " + zonename.toString() + " to view " + view);
   }
 
   resp->body = "";
   resp->status = 201;
 }
 
-// DELETE /views/<tag>/<id>     removes ZoneName "id" from view "tag"
+// DELETE /views/<view>/<id>     removes ZoneName "id" from view "view"
 static void apiServerViewsDELETE(HttpRequest* req, HttpResponse* resp)
 {
   ZoneData zoneData{req};
-  std::string tag{req->parameters["tag"]};
+  std::string view{req->parameters["view"]};
 
-  if (!zoneData.domainInfo.backend->viewDelZone(tag, zoneData.zoneName)) {
-    throw ApiException("Failed to remove " + zoneData.zoneName.toString() + " from view " + tag);
+  if (!zoneData.domainInfo.backend->viewDelZone(view, zoneData.zoneName)) {
+    throw ApiException("Failed to remove " + zoneData.zoneName.toString() + " from view " + view);
   }
 
   resp->body = "";
@@ -2744,14 +2744,14 @@ static void apiServerViewsDELETE(HttpRequest* req, HttpResponse* resp)
 // Networks
 
 // GET /networks                return the list of all registered networks and views (only one view per network)
-// GET /networks/<ip>/<netmask> return the name of the view for the given network
+// GET /networks/<ip>/<prefixlen> return the name of the view for the given network
 static void apiServerNetworksGET(HttpRequest* req, HttpResponse* resp)
 {
   std::string networkRepresentation{};
-  if (req->parameters.count("ip") != 0 && req->parameters.count("netmask") != 0) {
+  if (req->parameters.count("ip") != 0 && req->parameters.count("prefixlen") != 0) {
     std::string subnet{req->parameters["ip"]};
-    std::string netmask{req->parameters["netmask"]};
-    networkRepresentation = subnet + "/" + netmask;
+    std::string prefixlen{req->parameters["prefixlen"]};
+    networkRepresentation = subnet + "/" + prefixlen;
   }
   Netmask network(networkRepresentation);
 
@@ -2765,7 +2765,7 @@ static void apiServerNetworksGET(HttpRequest* req, HttpResponse* resp)
       continue;
     }
     item["network"] = pair.first.toString();
-    item["tag"] = pair.second;
+    item["view"] = pair.second;
     jsonarray.emplace_back(item);
     item.clear();
   }
@@ -2775,19 +2775,19 @@ static void apiServerNetworksGET(HttpRequest* req, HttpResponse* resp)
   resp->setJsonBody(jsonresult);
 }
 
-// PUT /networks/<ip>/<netmask> sets the name of the view for the given network
+// PUT /networks/<ip>/<prefixlen> sets the name of the view for the given network
 static void apiServerNetworksPUT(HttpRequest* req, HttpResponse* resp)
 {
   std::string subnet{req->parameters["ip"]};
-  std::string netmask{req->parameters["netmask"]};
-  Netmask network(subnet + "/" + netmask);
+  std::string prefixlen{req->parameters["prefixlen"]};
+  Netmask network(subnet + "/" + prefixlen);
 
   const auto& document = req->json();
-  std::string tag = stringFromJson(document, "tag");
+  std::string view = stringFromJson(document, "view");
 
   UeberBackend backend;
-  if (!backend.networkSet(network, tag)) {
-    throw ApiException("Failed to setup view " + tag + " for network " + network.toString());
+  if (!backend.networkSet(network, view)) {
+    throw ApiException("Failed to setup view " + view + " for network " + network.toString());
   }
 
   resp->body = "";
@@ -2893,7 +2893,7 @@ void AuthWebServer::webThread()
       url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/views";
       d_ws->registerApiHandler(url, apiServerViewsAllGET, "GET");
-      url += "/<tag>";
+      url += "/<view>";
       d_ws->registerApiHandler(url, apiServerViewsGET, "GET");
       d_ws->registerApiHandler(url, apiServerViewsPOST, "POST");
       url += "/<id>";
@@ -2903,7 +2903,7 @@ void AuthWebServer::webThread()
       url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/networks";
       d_ws->registerApiHandler(url, apiServerNetworksGET, "GET");
-      url += "/<ip>/<netmask>";
+      url += "/<ip>/<prefixlen>";
       d_ws->registerApiHandler(url, apiServerNetworksGET, "GET");
       d_ws->registerApiHandler(url, apiServerNetworksPUT, "PUT");
 

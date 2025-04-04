@@ -2702,7 +2702,7 @@ static void apiServerViewsGET(HttpRequest* req, HttpResponse* resp)
   Json::array jsonarray;
   jsonFillZoneNameArray(jsonarray, views);
   Json::object jsonresult{
-    {"views", jsonarray}};
+    {"zones", jsonarray}};
   resp->setJsonBody(jsonresult);
 }
 
@@ -2744,14 +2744,14 @@ static void apiServerViewsDELETE(HttpRequest* req, HttpResponse* resp)
 // Networks
 
 // GET /networks                return the list of all registered networks and views (only one view per network)
-// GET /networks/<ip>/<netmask> return the name of the view for the given network
+// GET /networks/<ip>/<prefixlen> return the name of the view for the given network
 static void apiServerNetworksGET(HttpRequest* req, HttpResponse* resp)
 {
   std::string networkRepresentation{};
-  if (req->parameters.count("ip") != 0 && req->parameters.count("netmask") != 0) {
+  if (req->parameters.count("ip") != 0 && req->parameters.count("prefixlen") != 0) {
     std::string subnet{req->parameters["ip"]};
-    std::string netmask{req->parameters["netmask"]};
-    networkRepresentation = subnet + "/" + netmask;
+    std::string prefixlen{req->parameters["prefixlen"]};
+    networkRepresentation = subnet + "/" + prefixlen;
   }
   Netmask network(networkRepresentation);
 
@@ -2775,12 +2775,12 @@ static void apiServerNetworksGET(HttpRequest* req, HttpResponse* resp)
   resp->setJsonBody(jsonresult);
 }
 
-// PUT /networks/<ip>/<netmask> sets the name of the view for the given network
+// PUT /networks/<ip>/<prefixlen> sets the name of the view for the given network
 static void apiServerNetworksPUT(HttpRequest* req, HttpResponse* resp)
 {
   std::string subnet{req->parameters["ip"]};
-  std::string netmask{req->parameters["netmask"]};
-  Netmask network(subnet + "/" + netmask);
+  std::string prefixlen{req->parameters["prefixlen"]};
+  Netmask network(subnet + "/" + prefixlen);
 
   const auto& document = req->json();
   std::string tag = stringFromJson(document, "tag");
@@ -2903,7 +2903,7 @@ void AuthWebServer::webThread()
       url.resize(urlLen); // back to /api/v1/servers/localhost
       url += "/networks";
       d_ws->registerApiHandler(url, apiServerNetworksGET, "GET");
-      url += "/<ip>/<netmask>";
+      url += "/<ip>/<prefixlen>";
       d_ws->registerApiHandler(url, apiServerNetworksGET, "GET");
       d_ws->registerApiHandler(url, apiServerNetworksPUT, "PUT");
 

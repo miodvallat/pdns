@@ -35,13 +35,14 @@ std::string keyConv(const T& t)
     throw std::out_of_range(std::string(__PRETTY_FUNCTION__) + " Attempt to serialize an unset DNSName");
   }
 
+  std::string ret;
+
   if (t.isRoot()) {
-    return std::string(1, (char)0);
+    return ret + std::string(1, (char)0);
   }
 
   std::string in = t.labelReverse().toDNSStringLC(); // www.ds9a.nl is now 2nl4ds9a3www0
-  std::string ret;
-  ret.reserve(in.size());
+  ret.reserve(ret.size() + in.size());
 
   for (auto iter = in.begin(); iter != in.end(); ++iter) {
     uint8_t len = *iter;
@@ -59,7 +60,7 @@ std::string keyConv(const T& t)
 template <class T, typename std::enable_if<std::is_same<T, ZoneName>::value, T>::type* = nullptr>
 std::string keyConv(const T& t)
 {
-  return keyConv(t.operator const DNSName&());
+  return keyConv(t.getVariant()) + string(1, (char)0) + keyConv(t.operator const DNSName&());
 }
 
 class LMDBBackend : public DNSBackend
@@ -82,6 +83,14 @@ public:
   bool feedEnts3(int domain_id, const DNSName& domain, map<DNSName, bool>& nonterm, const NSEC3PARAMRecordContent& ns3prc, bool narrow) override;
   bool replaceRRSet(uint32_t domain_id, const DNSName& qname, const QType& qt, const vector<DNSResourceRecord>& rrset) override;
   bool replaceComments(uint32_t domain_id, const DNSName& qname, const QType& qt, const vector<Comment>& comments) override;
+
+  void viewList(vector<string>& /* result */) override;
+  void viewListZones(const string& /* view */, vector<ZoneName>& /* result */) override;
+  bool viewAddZone(const string& /* view */, const ZoneName& /* zone */) override;
+  bool viewDelZone(const string& /* view */, const ZoneName& /* zone */) override;
+
+  bool networkSet(const Netmask& net, std::string& tag) override;
+  bool networkList(vector<pair<Netmask, string>>& networks) override;
 
   void getAllDomains(vector<DomainInfo>* domains, bool doSerial, bool include_disabled) override;
   void lookup(const QType& type, const DNSName& qdomain, int zoneId, DNSPacket* p = nullptr) override;
@@ -172,7 +181,9 @@ private:
     std::string operator()(uint32_t id, const DNSName& t)
     {
       std::string ret = operator()(id);
-      ret += keyConv(t);
+      // Force non-variant DNSName in case we got passed a ZoneName
+      DNSName t2 = t;
+      ret += keyConv(t2);
       ret.append(1, (char)0); // this means '00' really ends the zone
       return ret;
     }
@@ -305,6 +316,8 @@ private:
   shared_ptr<tmeta_t> d_tmeta;
   shared_ptr<tkdb_t> d_tkdb;
   shared_ptr<ttsig_t> d_ttsig;
+  MDBDbi d_tnetworks;
+  MDBDbi d_tviews;
 
   shared_ptr<RecordsROTransaction> d_rotxn; // for lookup and list
   shared_ptr<RecordsRWTransaction> d_rwtxn; // for feedrecord within begin/aborttransaction

@@ -2673,7 +2673,7 @@ static void prometheusMetrics(HttpRequest* /* req */, HttpResponse* resp)
 static void jsonFillZoneNameArray(Json::array& array, std::vector<ZoneName>& zones)
 {
   for (const auto& zone : zones) {
-    array.emplace_back(zone.toString());
+    array.emplace_back(zone.toString()); // FIXME: this (as noted in a comment in dnsname.hh on ZoneName::toString) lacks the variant
   }
 }
 
@@ -2702,7 +2702,7 @@ static void apiServerViewsGET(HttpRequest* req, HttpResponse* resp)
   Json::array jsonarray;
   jsonFillZoneNameArray(jsonarray, views);
   Json::object jsonresult{
-    {"zones", jsonarray}};
+    {"zones", jsonarray}}; // FIXME: this should probably be a list of zone objects that at least have name and variant (perhaps separated?) and a path for .../zones/[encoded domain name with variant]
   resp->setJsonBody(jsonresult);
 }
 

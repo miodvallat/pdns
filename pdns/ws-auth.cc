@@ -2728,13 +2728,12 @@ static void apiServerViewsDELETE(HttpRequest* req, HttpResponse* resp)
 // GET /networks/<ip>/<prefixlen> return the name of the view for the given network
 static void apiServerNetworksGET(HttpRequest* req, HttpResponse* resp)
 {
-  std::string networkRepresentation{};
+  Netmask network;
   if (req->parameters.count("ip") != 0 && req->parameters.count("prefixlen") != 0) {
     std::string subnet{req->parameters["ip"]};
     std::string prefixlen{req->parameters["prefixlen"]};
-    networkRepresentation = subnet + "/" + prefixlen;
+    network = subnet + "/" + prefixlen;
   }
-  Netmask network(networkRepresentation);
 
   UeberBackend backend;
   std::vector<pair<Netmask, string>> networks;
@@ -2742,7 +2741,7 @@ static void apiServerNetworksGET(HttpRequest* req, HttpResponse* resp)
   Json::array jsonarray;
   Json::object item;
   for (const auto& pair : networks) {
-    if (!networkRepresentation.empty() && !(pair.first == network)) {
+    if (!network.empty() && !(pair.first == network)) {
       continue;
     }
     item["network"] = pair.first.toString();

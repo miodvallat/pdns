@@ -189,6 +189,6 @@ private:
   void addNegCache(const Question& question) const;
   void addCache(const Question& question, vector<DNSZoneRecord>&& rrs) const;
 
-  bool fillSOAFromZoneRecord(DNSName& shorter, int zoneId, SOAData* soaData);
-  CacheResult fillSOAFromCache(SOAData* soaData, DNSName& shorter);
+  bool fillSOAFromZoneRecord(ZoneName& shorter, int zoneId, SOAData* soaData);
+  CacheResult fillSOAFromCache(SOAData* soaData, ZoneName& shorter);
 };

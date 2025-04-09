@@ -359,10 +359,10 @@ bool UeberBackend::inTransaction()
   return false;
 }
 
-bool UeberBackend::fillSOAFromZoneRecord(DNSName& shorter, const int zoneId, SOAData* const soaData)
+bool UeberBackend::fillSOAFromZoneRecord(ZoneName& shorter, const int zoneId, SOAData* const soaData)
 {
   // Zone exists in zone cache, directly look up SOA.
-  lookup(QType(QType::SOA), shorter, zoneId, nullptr);
+  lookup(QType(QType::SOA), shorter.operator const DNSName&(), zoneId, nullptr);
 
   DNSZoneRecord zoneRecord;
   if (!get(zoneRecord)) {
@@ -370,7 +370,7 @@ bool UeberBackend::fillSOAFromZoneRecord(DNSName& shorter, const int zoneId, SOA
     return false;
   }
 
-  if (zoneRecord.dr.d_name != shorter) {
+  if (zoneRecord.dr.d_name != shorter.operator const DNSName&()) {
     throw PDNSException("getAuth() returned an SOA for the wrong zone. Zone '" + zoneRecord.dr.d_name.toLogString() + "' is not equal to looked up zone '" + shorter.toLogString() + "'");
   }
 
@@ -400,7 +400,7 @@ bool UeberBackend::fillSOAFromZoneRecord(DNSName& shorter, const int zoneId, SOA
   return true;
 }
 
-UeberBackend::CacheResult UeberBackend::fillSOAFromCache(SOAData* soaData, DNSName& shorter)
+UeberBackend::CacheResult UeberBackend::fillSOAFromCache(SOAData* soaData, ZoneName& shorter)
 {
   auto cacheResult = cacheHas(d_question, d_answers);
 
@@ -409,7 +409,7 @@ UeberBackend::CacheResult UeberBackend::fillSOAFromCache(SOAData* soaData, DNSNa
     fillSOAData(d_answers[0], *soaData);
 
     soaData->db = backends.size() == 1 ? backends.begin()->get() : nullptr;
-    soaData->qname = shorter;
+    soaData->qname = shorter.operator const DNSName&();
   }
   else if (cacheResult == CacheResult::NegativeMatch && d_negcache_ttl != 0U) {
     DLOG(g_log << Logger::Error << "has neg cache entry: " << shorter << endl);
@@ -497,7 +497,7 @@ bool UeberBackend::getAuth(const ZoneName& target, const QType& qtype, SOAData* 
         remote = pkt_p->getRealRemote(); // we lose the prefix len from ECS here
       }
       if (g_zoneCache.getEntry(shorter, zoneId, &remote)) {
-        if (fillSOAFromZoneRecord(shorter.operator DNSName&(), zoneId, soaData)) {
+        if (fillSOAFromZoneRecord(shorter, zoneId, soaData)) {
           if (foundTarget(DNSName(target), shorter.operator const DNSName&(), qtype, soaData, found)) {
             return true;
           }
@@ -518,7 +518,7 @@ bool UeberBackend::getAuth(const ZoneName& target, const QType& qtype, SOAData* 
 
     // Check cache.
     if (cachedOk && (d_cache_ttl != 0 || d_negcache_ttl != 0)) {
-      auto cacheResult = fillSOAFromCache(soaData, shorter.operator DNSName&());
+      auto cacheResult = fillSOAFromCache(soaData, shorter);
       if (cacheResult == CacheResult::Hit) {
         if (foundTarget(DNSName(target), shorter.operator const DNSName&(), qtype, soaData, found)) {
           return true;

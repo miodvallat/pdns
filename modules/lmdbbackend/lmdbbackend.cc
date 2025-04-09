@@ -889,20 +889,6 @@ namespace serialization
   }
 
   template <class Archive>
-  void save(Archive& ar, const QType& g, const unsigned int /* version */)
-  {
-    ar & g.getCode();
-  }
-
-  template <class Archive>
-  void load(Archive& ar, QType& g, const unsigned int /* version */)
-  {
-    uint16_t tmp;
-    ar & tmp;
-    g = QType(tmp);
-  }
-
-  template <class Archive>
   void save(Archive& ar, const DomainInfo& g, const unsigned int /* version */)
   {
     ar & g.zone;
@@ -980,7 +966,6 @@ namespace serialization
 
 BOOST_SERIALIZATION_SPLIT_FREE(DNSName);
 BOOST_SERIALIZATION_SPLIT_FREE(ZoneName);
-BOOST_SERIALIZATION_SPLIT_FREE(QType);
 BOOST_SERIALIZATION_SPLIT_FREE(LMDBBackend::KeyDataDB);
 BOOST_SERIALIZATION_SPLIT_FREE(DomainInfo);
 BOOST_IS_BITWISE_SERIALIZABLE(ComboAddress);

@@ -2654,7 +2654,13 @@ static void prometheusMetrics(HttpRequest* /* req */, HttpResponse* resp)
 static void jsonFillZoneNameArray(Json::array& array, std::vector<ZoneName>& zones)
 {
   for (const auto& zone : zones) {
-    array.emplace_back(zone.toString()); // FIXME: this (as noted in a comment in dnsname.hh on ZoneName::toString) lacks the variant
+    // Remember ZoneName::toString() intentionally omits the variant
+    std::string name(zone.toString());
+    if (zone.hasVariant()) {
+      name += ZoneName::c_separator;
+      name += zone.getVariant();
+    }
+    array.emplace_back(name);
   }
 }
 

@@ -14,6 +14,7 @@ Random Backend
 * DNSSEC: No
 * Disabled data: No
 * Comments: No
+* Views: No
 * API: No
 * Multiple instances: No
 * Zone caching: No

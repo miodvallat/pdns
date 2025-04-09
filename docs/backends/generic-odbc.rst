@@ -11,6 +11,7 @@ Generic ODBC Backend
 * DNSSEC: Yes
 * Disabled data: Yes
 * Comments: Yes
+* Views: No
 * API: Read-Write
 * Multiple instances: yes
 * Zone caching: Yes

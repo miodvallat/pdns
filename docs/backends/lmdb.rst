@@ -11,6 +11,7 @@ LMDB backend
 * DNSSEC: Yes
 * Disabled data: Yes
 * Comments: No
+* Views: Yes
 * API: Read-Write
 * Multiple instances: No
 * Zone caching: Yes

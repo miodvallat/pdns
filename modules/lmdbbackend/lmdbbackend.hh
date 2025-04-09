@@ -69,7 +69,7 @@ public:
   explicit LMDBBackend(const string& suffix = "");
   ~LMDBBackend();
 
-  unsigned int getCapabilities() override { return CAP_DNSSEC | CAP_DIRECT | CAP_LIST | CAP_CREATE; }
+  unsigned int getCapabilities() override;
   bool list(const ZoneName& target, int id, bool include_disabled) override;
 
   bool getDomainInfo(const ZoneName& domain, DomainInfo& di, bool getserial = true) override;
@@ -350,5 +350,6 @@ private:
   bool d_dolog;
   bool d_random_ids;
   bool d_handle_dups;
+  bool d_views;
   DTime d_dtime; // used only for logging
 };

@@ -122,6 +122,7 @@ static void loadMainConfig(const std::string& configdir)
   ::arg().set("max-generate-steps", "Maximum number of $GENERATE steps when loading a zone from a file")="0";
   ::arg().set("max-include-depth", "Maximum nested $INCLUDE depth when loading a zone from a file")="20";
   ::arg().setSwitch("upgrade-unknown-types","Transparently upgrade known TYPExxx records. Recommended to keep off, except for PowerDNS upgrades until data sources are cleaned up")="no";
+  ::arg().setSwitch("views", "Enable views (variants) of zones, for backends which support them") = "no";
   ::arg().laxFile(configname);
 
   if(!::arg()["load-modules"].empty()) {
@@ -1553,6 +1554,11 @@ static int loadZone(const ZoneName& zone, const string& fname) {
       cerr << "Zone '" << zone << "' was not created." << endl;
       return EXIT_FAILURE;
     }
+    if (zone.hasVariant() && (B.getCapabilities() & DNSBackend::CAP_VIEWS) == 0) {
+      cerr << "None of the configured backends support views." << endl;
+      cerr << "Zone '" << zone << "' was not created." << endl;
+      return EXIT_FAILURE;
+    }
     cerr<<"Creating '"<<zone<<"'"<<endl;
     B.createDomain(zone, DomainInfo::Native, vector<ComboAddress>(), "");
 
@@ -1611,6 +1617,11 @@ static int createZone(const ZoneName &zone, const DNSName& nsname) {
     cerr << "Zone '" << zone << "' was not created." << endl;
     return EXIT_FAILURE;
   }
+  if (zone.hasVariant() && (B.getCapabilities() & DNSBackend::CAP_VIEWS) == 0) {
+    cerr << "None of the configured backends support views." << endl;
+    cerr << "Zone '" << zone << "' was not created." << endl;
+    return EXIT_FAILURE;
+  }
 
   DNSResourceRecord rr;
   rr.qname = DNSName(zone);
@@ -1640,7 +1651,7 @@ static int createZone(const ZoneName &zone, const DNSName& nsname) {
   cerr<<"Creating empty zone '"<<zone<<"'"<<endl;
   B.createDomain(zone, DomainInfo::Native, vector<ComboAddress>(), "");
   if(!B.getDomainInfo(zone, di)) {
-    cerr << "Zone '" << zone << "' was not created!" << endl;
+    cerr << "Zone '" << zone << "' was not created." << endl;
     return EXIT_FAILURE;
   }
 
@@ -3197,6 +3208,11 @@ static int createSecondaryZone(vector<string>& cmds, const std::string_view syno
     cerr << "Zone '" << zone << "' was not created." << endl;
     return EXIT_FAILURE;
   }
+  if (zone.hasVariant() && (B.getCapabilities() & DNSBackend::CAP_VIEWS) == 0) {
+    cerr << "None of the configured backends support views." << endl;
+    cerr << "Zone '" << zone << "' was not created." << endl;
+    return EXIT_FAILURE;
+  }
   vector<ComboAddress> primaries;
   for (unsigned i=2; i < cmds.size(); i++) {
     primaries.emplace_back(cmds.at(i), 53);
@@ -3204,7 +3220,7 @@ static int createSecondaryZone(vector<string>& cmds, const std::string_view syno
   cerr << "Creating secondary zone '" << zone << "', with primaries '" << comboAddressVecToString(primaries) << "'" << endl;
   B.createDomain(zone, DomainInfo::Secondary, primaries, "");
   if(!B.getDomainInfo(zone, di)) {
-    cerr << "Zone '" << zone << "' was not created!" << endl;
+    cerr << "Zone '" << zone << "' was not created." << endl;
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
@@ -4364,8 +4380,12 @@ static int B2BMigrate(vector<string>& cmds, const std::string_view synopsis)
     DNSResourceRecord rr; // NOLINT(readability-identifier-length)
     cout<<"Processing '"<<di.zone<<"'"<<endl;
     // create zone
+    if (di.zone.hasVariant() && (tgt->getCapabilities() & DNSBackend::CAP_VIEWS) == 0) {
+      cerr << "Target backend does not support views." << endl;
+      throw PDNSException("Failed to create zone");
+    }
     if (!tgt->createDomain(di.zone, di.kind, di.primaries, di.account)) {
-       throw PDNSException("Failed to create zone");
+      throw PDNSException("Failed to create zone");
     }
     if (!tgt->getDomainInfo(di.zone, di_new)) {
       throw PDNSException("Failed to create zone");

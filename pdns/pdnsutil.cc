@@ -4597,10 +4597,9 @@ static int viewAddZone(vector<string>& cmds, const std::string_view synopsis)
   string view{cmds.at(1)};
   ZoneName zone{cmds.at(2)};
   if (!B.viewAddZone(view, zone)) {
-    cerr<<"viewAddZone returned false"<<endl;
+    cerr<<"Operation failed."<<endl;
     return 1;
  }
-  cerr<<"done"<<endl;
   return 0;
 }
 
@@ -4615,10 +4614,9 @@ static int viewDelZone(vector<string>& cmds, const std::string_view synopsis)
   string view{cmds.at(1)};
   ZoneName zone{cmds.at(2)};
   if (!B.viewDelZone(view, zone)) {
-    cerr<<"viewDelZone returned false"<<endl;
+    cerr<<"Operation failed."<<endl;
     return 1;
  }
-  cerr<<"done"<<endl;
   return 0;
 }
 
@@ -4656,10 +4654,9 @@ static int networkSet(vector<string>& cmds, const std::string_view synopsis)
     view = cmds.at(2);
   }
   if (!B.networkSet(net, view)) {
-    cerr<<"networkSet returned false"<<endl;
+    cerr<<"Operation failed."<<endl;
     return 1;
  }
-  cerr<<"done"<<endl;
   return 0;
 }
 

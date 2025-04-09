@@ -1329,11 +1329,11 @@ void LMDBBackend::viewList(vector<string>& result)
     try {
       auto [view, zone] = splitField(key.getNoStripHeader<string>(), '\x0');
       auto variant = val.get<string>();
-      cerr << "in view [" << view << "], zone [" << zone << "] has variant [" << variant << "]" << endl;
+      cerr << "in view [" << view << "], zone [" << zone << "] has variant [" << variant << "]" << endl; // VIEWS_DEBUG remove
       tmp.insert(view);
     }
     catch (std::exception& e) {
-      cerr << e.what() << ": " << makeHexDump(key.getNoStripHeader<string>()) << " / " << makeHexDump(val.get<string>()) << endl;
+      cerr << e.what() << ": " << makeHexDump(key.getNoStripHeader<string>()) << " / " << makeHexDump(val.get<string>()) << endl; // VIEWS_DEBUG improve this
     }
 
     ret = cursor.next(key, val); // this should use some lower bound thing to skip to the next view, also avoiding duplicates in `result`
@@ -1363,13 +1363,13 @@ void LMDBBackend::viewListZones(const string& inview, vector<ZoneName>& result)
     try {
       auto [view, zone] = splitField(key.getNoStripHeader<string>(), '\x0');
       auto variant = val.get<string>();
-      cerr << "in view [" << view << "], zone [" << zone << "] has variant [" << variant << "]" << endl;
+      cerr << "in view [" << view << "], zone [" << zone << "] has variant [" << variant << "]" << endl; // VIEWS_DEBUG remove
       if (view == inview) {
         result.emplace_back(ZoneName(zone, variant));
       }
     }
     catch (std::exception& e) {
-      cerr << e.what() << ": " << makeHexDump(key.getNoStripHeader<string>()) << " / " << makeHexDump(val.get<string>()) << endl;
+      cerr << e.what() << ": " << makeHexDump(key.getNoStripHeader<string>()) << " / " << makeHexDump(val.get<string>()) << endl; // VIEWS_DEBUG improve this
     }
 
     ret = cursor.next(key, val); // this should be prefix-limited to quickly find, and then only scan, one view
@@ -1444,7 +1444,7 @@ bool LMDBBackend::networkList(vector<pair<Netmask, string>>& networks)
       networks.emplace_back(std::make_pair(net, view));
     }
     catch (std::exception& e) {
-      cerr << e.what() << ": " << makeHexDump(netval.getNoStripHeader<string>()) << " / " << makeHexDump(viewval.get<string>()) << endl;
+      cerr << e.what() << ": " << makeHexDump(netval.getNoStripHeader<string>()) << " / " << makeHexDump(viewval.get<string>()) << endl; // VIEWS_DEBUG improve this
     }
 
     ret = cursor.next(netval, viewval);

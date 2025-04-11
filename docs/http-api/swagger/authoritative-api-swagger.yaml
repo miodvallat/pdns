@@ -1000,8 +1000,8 @@ paths:
           schema:
             type: string
       responses:
-        '201':
-          description: Updated
+        '204':
+          description: 'Returns 204 No Content on success.'
         <<: *commonErrors
 
   '/servers/{server_id}/views/{view}/{id}':
@@ -1107,8 +1107,8 @@ paths:
           schema:
             type: string
       responses:
-        '201':
-          description: Updated
+        '204':
+          description: 'Returns 204 No Content on success.'
         <<: *commonErrors
 
 definitions:

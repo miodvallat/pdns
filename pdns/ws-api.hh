@@ -37,6 +37,9 @@ string apiZoneNameToId(const DNSName& name);
 void apiCheckNameAllowedCharacters(std::string_view name);
 void apiCheckQNameAllowedCharacters(std::string_view name);
 DNSName apiNameToDNSName(const string& name);
+#if defined(PDNS_AUTH)
+ZoneName apiNameToZoneName(const string& name);
+#endif
 
 // To be provided by product code.
 void productServerStatisticsFetch(std::map<string, string>& out);

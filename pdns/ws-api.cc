@@ -266,6 +266,27 @@ DNSName apiNameToDNSName(const string& name)
   }
 }
 
+#if defined(PDNS_AUTH)
+ZoneName apiNameToZoneName(const string& name)
+{
+  // Split the variant name, if any, in order to be able to invoke
+  // isCanonical on the right subset.
+  if (auto sep = name.find(ZoneName::c_separator); sep != std::string::npos) {
+    std::string_view domainPart = name.substr(0, sep);
+    if (!isCanonical(domainPart)) {
+      throw ApiException("Zone Name '" + name + "' is not canonical");
+    }
+    try {
+      return ZoneName(name);
+    }
+    catch (...) {
+      throw ApiException("Unable to parse Zone Name '" + name + "'");
+    }
+  }
+  return ZoneName(apiNameToDNSName(name));
+}
+#endif
+
 ZoneName apiZoneIdToName(const string& identifier)
 {
   string zonename;

@@ -1843,7 +1843,7 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
   DNSSECKeeper dnssecKeeper(&backend);
   DomainInfo domainInfo;
   const auto& document = req->json();
-  ZoneName zonename = ZoneName(apiNameToDNSName(stringFromJson(document, "name")));
+  ZoneName zonename = apiNameToZoneName(stringFromJson(document, "name"));
   apiCheckNameAllowedCharacters(zonename.toString());
   zonename.makeUsLowerCase();
 
@@ -2039,7 +2039,7 @@ static void apiServerZonesGET(HttpRequest* req, HttpResponse* resp)
   if (req->getvars.count("zone") != 0) {
     string zone = req->getvars["zone"];
     apiCheckNameAllowedCharacters(zone);
-    ZoneName zonename = ZoneName(apiNameToDNSName(zone));
+    ZoneName zonename = apiNameToZoneName(zone);
     zonename.makeUsLowerCase();
     DomainInfo domainInfo;
     if (backend.getDomainInfo(zonename, domainInfo)) {
@@ -2309,11 +2309,11 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
     domainInfo.backend->getDomainMetadataOne(zonename, "SOA-EDIT", soa_edit_kind);
     bool soa_edit_done = false;
 
-    set<std::tuple<ZoneName, QType, string>> seen;
+    set<std::tuple<DNSName, QType, string>> seen;
 
     for (const auto& rrset : rrsets.array_items()) {
       string changetype = toUpper(stringFromJson(rrset, "changetype"));
-      ZoneName qname = ZoneName(apiNameToDNSName(stringFromJson(rrset, "name")));
+      DNSName qname = apiNameToDNSName(stringFromJson(rrset, "name"));
       apiCheckQNameAllowedCharacters(qname.toString());
       QType qtype;
       qtype = stringFromJson(rrset, "type");
@@ -2328,13 +2328,13 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
 
       if (changetype == "DELETE") {
         // delete all matching qname/qtype RRs (and, implicitly comments).
-        if (!domainInfo.backend->replaceRRSet(domainInfo.id, DNSName(qname), qtype, vector<DNSResourceRecord>())) {
+        if (!domainInfo.backend->replaceRRSet(domainInfo.id, qname, qtype, vector<DNSResourceRecord>())) {
           throw ApiException("Hosting backend does not support editing records.");
         }
       }
       else if (changetype == "REPLACE") {
         // we only validate for REPLACE, as DELETE can be used to "fix" out of zone records.
-        if (!qname.isPartOf(zonename) && qname != zonename) {
+        if (!qname.isPartOf(zonename) && qname != zonename.operator const DNSName&()) {
           throw ApiException("RRset " + qname.toString() + " IN " + qtype.toString() + ": Name is out of zone");
         }
 
@@ -2352,11 +2352,11 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
           if (replace_records) {
             // ttl shouldn't be part of DELETE, and it shouldn't be required if we don't get new records.
             uint32_t ttl = uintFromJson(rrset, "ttl");
-            gatherRecords(rrset, qname.operator DNSName&(), qtype, ttl, new_records);
+            gatherRecords(rrset, qname, qtype, ttl, new_records);
 
             for (DNSResourceRecord& resourceRecord : new_records) {
               resourceRecord.domain_id = static_cast<int>(domainInfo.id);
-              if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == DNSName(zonename)) {
+              if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zonename.operator const DNSName&()) {
                 soa_edit_done = increaseSOARecord(resourceRecord, soa_edit_api_kind, soa_edit_kind);
               }
             }
@@ -2364,7 +2364,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
           }
 
           if (replace_comments) {
-            gatherComments(rrset, qname.operator const DNSName&(), qtype, new_comments);
+            gatherComments(rrset, qname, qtype, new_comments);
 
             for (Comment& comment : new_comments) {
               comment.domain_id = static_cast<int>(domainInfo.id);
@@ -2380,7 +2380,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
           bool dname_seen = false;
           bool ns_seen = false;
 
-          domainInfo.backend->lookup(QType(QType::ANY), qname.operator const DNSName&(), static_cast<int>(domainInfo.id));
+          domainInfo.backend->lookup(QType(QType::ANY), qname, static_cast<int>(domainInfo.id));
           DNSResourceRecord resourceRecord;
           while (domainInfo.backend->get(resourceRecord)) {
             if (resourceRecord.qtype.getCode() == QType::ENT) {
@@ -2407,7 +2407,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
             }
           }
 
-          if (dname_seen && ns_seen && qname != zonename) {
+          if (dname_seen && ns_seen && qname != zonename.operator const DNSName&()) {
             throw ApiException("RRset " + qname.toString() + " IN " + qtype.toString() + ": Cannot have both NS and DNAME except in zone apex");
           }
           if (!new_records.empty() && domainInfo.kind == DomainInfo::Consumer) {
@@ -2416,16 +2416,16 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
           }
           if (!new_records.empty() && ent_present) {
             QType qt_ent{0};
-            if (!domainInfo.backend->replaceRRSet(domainInfo.id, DNSName(qname), qt_ent, new_records)) {
+            if (!domainInfo.backend->replaceRRSet(domainInfo.id, qname, qt_ent, new_records)) {
               throw ApiException("Hosting backend does not support editing records.");
             }
           }
-          if (!domainInfo.backend->replaceRRSet(domainInfo.id, DNSName(qname), qtype, new_records)) {
+          if (!domainInfo.backend->replaceRRSet(domainInfo.id, qname, qtype, new_records)) {
             throw ApiException("Hosting backend does not support editing records.");
           }
         }
         if (replace_comments) {
-          if (!domainInfo.backend->replaceComments(domainInfo.id, qname.operator const DNSName&(), qtype, new_comments)) {
+          if (!domainInfo.backend->replaceComments(domainInfo.id, qname, qtype, new_comments)) {
             throw ApiException("Hosting backend does not support editing comments.");
           }
         }
@@ -2587,7 +2587,7 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp)
 
 static void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp)
 {
-  ZoneName canon = ZoneName(apiNameToDNSName(req->getvars["domain"]));
+  ZoneName canon = apiNameToZoneName(req->getvars["domain"]);
 
   if (g_zoneCache.isEnabled()) {
     DomainInfo domainInfo;
@@ -2699,7 +2699,7 @@ static void apiServerViewsPOST(HttpRequest* req, HttpResponse* resp)
   UeberBackend backend;
   DomainInfo domainInfo;
   const auto& document = req->json();
-  ZoneName zonename = ZoneName(apiNameToDNSName(stringFromJson(document, "name")));
+  ZoneName zonename = apiNameToZoneName(stringFromJson(document, "name"));
 
   if (!backend.getDomainInfo(zonename, domainInfo)) {
     throw HttpNotFoundException(); // zone name not found

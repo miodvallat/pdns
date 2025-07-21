@@ -3388,6 +3388,10 @@ static bool showZone(DNSSECKeeper& dnsseckeeper, const ZoneName& zone, bool expo
           cout << "!= ";
         cout<<sd.serial<<" (serial in the database)"<<endl;
       }
+      string soa_edit;
+      dnsseckeeper.getSoaEdit(di.zone, soa_edit, false);
+      uint32_t current_serial = calculateEditSOA(di.serial, soa_edit, di.zone, nullptr /* no structured logging */);
+      cout << "Currently served serial number: " << current_serial << endl;
     }
     else if (di.isSecondaryType()) {
       cout << "Primar" << addS(di.primaries, "y", "ies") << ": ";

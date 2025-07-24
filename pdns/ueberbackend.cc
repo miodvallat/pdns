@@ -472,12 +472,12 @@ static std::vector<std::unique_ptr<DNSBackend>>::iterator findBestMatchingBacken
 
     auto wirelength = DNSName(shorter).wirelength();
     if (bestMatch->first < wirelength) {
-      DLOG(g_log << Logger::Error << "skipped, we already found a shorter best match in this backend: " << bestMatch->second.qname() << endl);
+      DLOG(g_log << Logger::Error << "skipped, we already found a shorter best match in this backend: " << bestMatch->second.zonename << endl);
       continue;
     }
 
     if (bestMatch->first == wirelength) {
-      DLOG(g_log << Logger::Error << "use shorter best match: " << bestMatch->second.qname() << endl);
+      DLOG(g_log << Logger::Error << "use shorter best match: " << bestMatch->second.zonename << endl);
       *soaData = bestMatch->second;
       break;
     }
@@ -487,14 +487,14 @@ static std::vector<std::unique_ptr<DNSBackend>>::iterator findBestMatchingBacken
     if ((*backend)->getAuth(shorter, soaData)) {
       DLOG(g_log << Logger::Error << "got: " << soaData->zonename << endl);
 
-      if (!soaData->qname().empty() && !shorter.isPartOf(soaData->qname())) {
-        throw PDNSException("getAuth() returned an SOA for the wrong zone. Zone '" + soaData->qname().toLogString() + "' is not part of '" + shorter.toLogString() + "'");
+      if (!soaData->zonename.empty() && !shorter.isPartOf(soaData->zonename)) {
+        throw PDNSException("getAuth() returned an SOA for the wrong zone. Zone '" + soaData->zonename.toLogString() + "' is not part of '" + shorter.toLogString() + "'");
       }
 
-      bestMatch->first = soaData->qname().wirelength();
+      bestMatch->first = DNSName(soaData->zonename).wirelength();
       bestMatch->second = *soaData;
 
-      if (soaData->qname() == shorter) {
+      if (shorter == soaData->zonename) {
         break;
       }
     }
@@ -509,11 +509,11 @@ static std::vector<std::unique_ptr<DNSBackend>>::iterator findBestMatchingBacken
 static bool foundTarget(const DNSName& target, const DNSName& shorter, const QType& qtype, [[maybe_unused]] SOAData* soaData, const bool found)
 {
   if (found == (qtype == QType::DS) || target != shorter) {
-    DLOG(g_log << Logger::Error << "found: " << soaData->qname() << endl);
+    DLOG(g_log << Logger::Error << "found: " << soaData->zonename << endl);
     return true;
   }
 
-  DLOG(g_log << Logger::Error << "chasing next: " << soaData->qname() << endl);
+  DLOG(g_log << Logger::Error << "chasing next: " << soaData->zonename << endl);
   return false;
 }
 
@@ -604,14 +604,14 @@ bool UeberBackend::getAuth(const ZoneName& target, const QType& qtype, SOAData* 
       }
 
       if (d_cache_ttl != 0) {
-        DLOG(g_log << Logger::Error << "add pos cache entry: " << soaData->qname() << endl);
+        DLOG(g_log << Logger::Error << "add pos cache entry: " << DNSName(soaData->zonename) << endl);
 
         d_question.qtype = QType::SOA;
-        d_question.qname = soaData->qname();
+        d_question.qname = soaData->zonename;
         d_question.zoneId = zoneId;
 
         DNSZoneRecord resourceRecord;
-        resourceRecord.dr.d_name = soaData->qname();
+        resourceRecord.dr.d_name = soaData->zonename;
         resourceRecord.dr.d_type = QType::SOA;
         resourceRecord.dr.setContent(makeSOAContent(*soaData));
         resourceRecord.dr.d_ttl = soaData->ttl;
@@ -643,12 +643,12 @@ bool UeberBackend::getSOAUncached(const ZoneName& domain, SOAData& soaData)
       continue;
     }
     if (backend->getSOA(domain, UnknownDomainID, soaData)) {
-      if (DNSName(domain) != soaData.qname()) {
-        throw PDNSException("getSOA() returned an SOA for the wrong zone. Question: '" + domain.toLogString() + "', answer: '" + soaData.qname().toLogString() + "'");
+      if (DNSName(domain) != DNSName(soaData.zonename)) {
+        throw PDNSException("getSOA() returned an SOA for the wrong zone. Question: '" + domain.toLogString() + "', answer: '" + DNSName(soaData.zonename).toLogString() + "'");
       }
       if (d_cache_ttl != 0U) {
         DNSZoneRecord zoneRecord;
-        zoneRecord.dr.d_name = soaData.qname();
+        zoneRecord.dr.d_name = soaData.zonename;
         zoneRecord.dr.d_type = QType::SOA;
         zoneRecord.dr.setContent(makeSOAContent(soaData));
         zoneRecord.dr.d_ttl = soaData.ttl;

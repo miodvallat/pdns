@@ -263,7 +263,7 @@ public:
       }
 
       auto& idx = records->get<OrderedNameTypeTag>();
-      auto range = idx.equal_range(std::tuple(best.operator const DNSName&(), QType::SOA));
+      auto range = idx.equal_range(std::tuple(best, QType::SOA));
       if (range.first == range.second) {
         return false;
       }

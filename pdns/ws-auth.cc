@@ -1284,7 +1284,7 @@ static void apiZoneCryptokeysExport(const ZoneName& zonename, int64_t inquireKey
       Json::array dses;
       for (const uint8_t keyid : {DNSSECKeeper::DIGEST_SHA256, DNSSECKeeper::DIGEST_SHA384}) {
         try {
-          string dsRecordContent = makeDSFromDNSKey(zonename.operator const DNSName&(), value.first.getDNSKEY(), keyid).getZoneRepresentation();
+          string dsRecordContent = makeDSFromDNSKey(zonename, value.first.getDNSKEY(), keyid).getZoneRepresentation();
 
           dses.emplace_back(dsRecordContent);
 
@@ -1645,7 +1645,7 @@ static void checkNewRecords(vector<DNSResourceRecord>& records, const ZoneName& 
       }
     }
 
-    if (rec.qname == zone.operator const DNSName&()) {
+    if (rec.qname == zone) {
       if (nonApexTypes.count(rec.qtype.getCode()) != 0) {
         throw ApiException("Record " + rec.qname.toString() + " IN " + rec.qtype.toString() + " is not allowed at apex");
       }
@@ -1750,7 +1750,7 @@ class TSIGKeyData
 {
 public:
   TSIGKeyData(HttpRequest* req) :
-    keyName(apiZoneIdToName(req->parameters["id"]).operator const DNSName&())
+    keyName(apiZoneIdToName(req->parameters["id"]))
   {
     try {
       if (!backend.getTSIGKey(keyName, algo, content)) {
@@ -1963,24 +1963,24 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
 
     apiCheckQNameAllowedCharacters(resourceRecord.qname.toString());
 
-    if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zonename.operator const DNSName&()) {
+    if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zonename) {
       have_soa = true;
     }
-    if (resourceRecord.qtype.getCode() == QType::NS && resourceRecord.qname == zonename.operator const DNSName&()) {
+    if (resourceRecord.qtype.getCode() == QType::NS && resourceRecord.qname == zonename) {
       have_zone_ns = true;
     }
   }
 
   // synthesize RRs as needed
   DNSResourceRecord autorr;
-  autorr.qname = zonename.operator const DNSName&();
+  autorr.qname = zonename;
   autorr.auth = true;
   autorr.ttl = ::arg().asNum("default-ttl");
 
   if (!have_soa && zonekind != DomainInfo::Secondary && zonekind != DomainInfo::Consumer) {
     // synthesize a SOA record so the zone "really" exists
     string soa = ::arg()["default-soa-content"];
-    boost::replace_all(soa, "@", zonename.operator const DNSName&().toStringNoDot());
+    boost::replace_all(soa, "@", DNSName(zonename).toStringNoDot());
     SOAData soaData;
     fillSOAData(soa, soaData);
     soaData.serial = document["serial"].int_value();
@@ -2176,7 +2176,7 @@ static void apiServerZoneDetailPUT(HttpRequest* req, HttpResponse* resp)
       }
       apiCheckQNameAllowedCharacters(resourceRecord.qname.toString());
 
-      if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zoneData.zoneName.operator const DNSName&()) {
+      if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zoneData.zoneName) {
         haveSoa = true;
       }
     }
@@ -2215,7 +2215,7 @@ static void apiServerZoneDetailPUT(HttpRequest* req, HttpResponse* resp)
   updateDomainSettingsFromDocument(zoneData.backend, zoneData.domainInfo, zoneData.zoneName, document, zoneWasModified);
   zoneData.domainInfo.backend->commitTransaction();
 
-  purgeAuthCaches(zoneData.zoneName.operator const DNSName&().toString() + "$");
+  purgeAuthCaches(DNSName(zoneData.zoneName).toString() + "$");
 
   resp->body = "";
   resp->status = 204; // No Content, but indicate success
@@ -2244,7 +2244,7 @@ static void apiServerZoneDetailDELETE(HttpRequest* req, HttpResponse* resp)
 
   // clear caches
   DNSSECKeeper::clearCaches(zoneData.zoneName);
-  purgeAuthCaches(zoneData.zoneName.operator const DNSName&().toString() + "$");
+  purgeAuthCaches(DNSName(zoneData.zoneName).toString() + "$");
 
   // empty body on success
   resp->body = "";
@@ -2405,7 +2405,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
 
             for (DNSResourceRecord& resourceRecord : new_records) {
               resourceRecord.domain_id = static_cast<int>(domainInfo.id);
-              if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zonename.operator const DNSName&()) {
+              if (resourceRecord.qtype.getCode() == QType::SOA && resourceRecord.qname == zonename) {
                 soa_edit_done = increaseSOARecord(resourceRecord, soa_edit_api_kind, soa_edit_kind, zonename);
               }
             }
@@ -2456,7 +2456,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
             }
           }
 
-          if (dname_seen && ns_seen && qname != zonename.operator const DNSName&()) {
+          if (dname_seen && ns_seen && qname != zonename) {
             throw ApiException("RRset " + qname.toString() + " IN " + qtype.toString() + ": Cannot have both NS and DNAME except in zone apex");
           }
           if (!new_records.empty() && domainInfo.kind == DomainInfo::Consumer) {
@@ -2515,7 +2515,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
   domainInfo.backend->commitTransaction();
 
   DNSSECKeeper::clearCaches(zonename);
-  purgeAuthCaches(zonename.operator const DNSName&().toString() + "$");
+  purgeAuthCaches(DNSName(zonename).toString() + "$");
 
   resp->body = "";
   resp->status = 204; // No Content, but indicate success
@@ -2652,7 +2652,7 @@ static void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp)
 
   DNSSECKeeper::clearCaches(canon);
   // purge entire zone from cache, not just zone-level records.
-  uint64_t count = purgeAuthCaches(canon.operator const DNSName&().toString() + "$");
+  uint64_t count = purgeAuthCaches(DNSName(canon).toString() + "$");
   resp->setJsonBody(Json::object{
     {"count", (int)count},
     {"result", "Flushed cache."}});
@@ -2761,7 +2761,7 @@ static void apiServerViewsPOST(HttpRequest* req, HttpResponse* resp)
   }
   // Purge packet cache for that zone
   if (PC.enabled()) {
-    std::string purgename = zonename.operator const DNSName&().toString();
+    std::string purgename = DNSName(zonename).toString();
     purgename.append("$");
     (void)PC.purge(view, purgename);
   }
@@ -2790,7 +2790,7 @@ static void apiServerViewsDELETE(HttpRequest* req, HttpResponse* resp)
       (void)PC.purgeView(view);
     }
     else {
-      std::string purgename = zoneData.zoneName.operator const DNSName&().toString();
+      std::string purgename = DNSName(zoneData.zoneName).toString();
       purgename.append("$");
       (void)PC.purge(view, purgename);
     }

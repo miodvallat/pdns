@@ -603,7 +603,7 @@ namespace {
 // NOLINTNEXTLINE(readability-identifier-length)
 int TCPNameserver::doAXFR(const ZoneName &targetZone, std::unique_ptr<DNSPacket>& q, int outsock)  // NOLINT(readability-function-cognitive-complexity)
 {
-  const DNSName& target = targetZone.operator const DNSName&();
+  const DNSName& target = targetZone;
   string logPrefix="AXFR-out zone '"+targetZone.toLogString()+"', client '"+q->getRemoteStringWithPort()+"', ";
 
   std::unique_ptr<DNSPacket> outpacket= getFreshAXFRPacket(q);

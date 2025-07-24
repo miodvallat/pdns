@@ -360,7 +360,7 @@ static string encodeName(const string& name)
 string apiZoneNameToId(const ZoneName& dname)
 {
 #if defined(PDNS_AUTH)
-  std::string ret = apiNameToId(dname.operator const DNSName&().toString());
+  std::string ret = apiNameToId(DNSName(dname).toString());
   // Add the variant, if any
   if (dname.hasVariant()) {
     ret += ".";

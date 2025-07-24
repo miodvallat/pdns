@@ -114,7 +114,7 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
     return 0;
   }
 
-  if ((rrType == QType::NSEC3PARAM || rrType == QType::DNSKEY) && rr->d_name != di->zone.operator const DNSName&()) {
+  if ((rrType == QType::NSEC3PARAM || rrType == QType::DNSKEY) && rr->d_name != di->zone) {
     g_log<<Logger::Warning<<msgPrefix<<"Trying to add/update/delete "<<rr->d_name<<"|"<<rrType.toString()<<", "<<rrType.toString()<<" must be at zone apex, ignoring!"<<endl;
     return 0;
   }
@@ -262,7 +262,7 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
       delnonterm.insert(rr->d_name); // always remove any ENT's in the place where we're going to add a record.
       auto newRec = DNSResourceRecord::fromWire(*rr);
       newRec.domain_id = di->id;
-      newRec.auth = (rr->d_name == di->zone.operator const DNSName&() || rrType.getCode() != QType::NS);
+      newRec.auth = (rr->d_name == di->zone || rrType.getCode() != QType::NS);
       di->backend->feedRecord(newRec, DNSName());
       changedRecords++;
 
@@ -272,10 +272,10 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
       bool auth=newRec.auth;
       bool fixDS = (rrType == QType::DS);
 
-      if (di->zone.operator const DNSName&() != shorter) { // Everything at APEX is auth=1 && no ENT's
+      if (shorter != di->zone) { // Everything at APEX is auth=1 && no ENT's
         do {
 
-          if (di->zone.operator const DNSName&() == shorter) {
+          if (shorter == di->zone) {
             break;
 	  }
 
@@ -416,7 +416,7 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
     di->backend->lookup(rrType, rr->d_name, di->id);
     while(di->backend->get(rec)) {
       if (rr->d_class == QClass::ANY) { // 3.4.2.3
-        if (rec.qname == di->zone.operator const DNSName&() && (rec.qtype == QType::NS || rec.qtype == QType::SOA)) { // Never delete all SOA and NS's
+        if (rec.qname == di->zone && (rec.qtype == QType::NS || rec.qtype == QType::SOA)) { // Never delete all SOA and NS's
           rrset.push_back(rec);
         }
         else
@@ -447,7 +447,7 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
 
 
       // If we've removed a delegate, we need to reset ordername/auth for some records.
-      if (rrType == QType::NS && rr->d_name != di->zone.operator const DNSName&()) { 
+      if (rrType == QType::NS && rr->d_name != di->zone) { 
         vector<DNSName> belowOldDelegate, nsRecs, updateAuthFlag;
         di->backend->listSubZone(ZoneName(rr->d_name), di->id);
         while (di->backend->get(rec)) {
@@ -503,7 +503,7 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
         // If we didn't have to insert an ENT, we might have deleted a record at very deep level
         // and we must then clean up the ENT's above the deleted record.
         DNSName shorter(rr->d_name);
-        while (shorter != di->zone.operator const DNSName&()) {
+        while (shorter != di->zone) {
           shorter.chopOff();
           bool foundRealRR = false;
           bool foundEnt = false;
@@ -924,7 +924,7 @@ int PacketHandler::processUpdate(DNSPacket& packet) { // NOLINT(readability-func
       if (dnsRecord->d_place == DNSResourceRecord::AUTHORITY) {
         /* see if it's permitted by policy */
         if (this->d_update_policy_lua != nullptr) {
-          if (!this->d_update_policy_lua->updatePolicy(dnsRecord->d_name, QType(dnsRecord->d_type), di.zone.operator const DNSName&(), packet)) {
+          if (!this->d_update_policy_lua->updatePolicy(dnsRecord->d_name, QType(dnsRecord->d_type), di.zone, packet)) {
             g_log<<Logger::Warning<<msgPrefix<<"Refusing update for " << dnsRecord->d_name << "/" << QType(dnsRecord->d_type).toString() << ": Not permitted by policy"<<endl;
             continue;
           } else {
@@ -932,7 +932,7 @@ int PacketHandler::processUpdate(DNSPacket& packet) { // NOLINT(readability-func
           }
         }
 
-        if (dnsRecord->d_class == QClass::NONE  && dnsRecord->d_type == QType::NS && dnsRecord->d_name == di.zone.operator const DNSName&()) {
+        if (dnsRecord->d_class == QClass::NONE  && dnsRecord->d_type == QType::NS && dnsRecord->d_name == di.zone) {
           nsRRtoDelete.push_back(dnsRecord);
         }
         else if (dnsRecord->d_class == QClass::IN &&  dnsRecord->d_ttl > 0) {
@@ -979,7 +979,7 @@ int PacketHandler::processUpdate(DNSPacket& packet) { // NOLINT(readability-func
     if (nsRRtoDelete.size()) {
       vector<DNSResourceRecord> nsRRInZone;
       DNSResourceRecord rec;
-      di.backend->lookup(QType(QType::NS), di.zone.operator const DNSName&(), di.id);
+      di.backend->lookup(QType(QType::NS), di.zone, di.id);
       while (di.backend->get(rec)) {
         nsRRInZone.push_back(rec);
       }
@@ -1009,7 +1009,7 @@ int PacketHandler::processUpdate(DNSPacket& packet) { // NOLINT(readability-func
 
       d_dk.clearMetaCache(di.zone);
       // Purge the records!
-      purgeAuthCaches(di.zone.operator const DNSName&().toString() + "$");
+      purgeAuthCaches(DNSName(di.zone).toString() + "$");
 
       // Notify secondaries
       if (di.kind == DomainInfo::Primary) {

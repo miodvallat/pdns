@@ -581,7 +581,7 @@ struct SOAData
     domain_id(UnknownDomainID) {};
 
 #if defined(PDNS_AUTH)
-  const DNSName& qname() const { return zonename.operator const DNSName&(); }
+  const DNSName& qname() const { return zonename; }
   ZoneName zonename;
 #else
   DNSName qname;

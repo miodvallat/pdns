@@ -387,7 +387,7 @@ bool DNSSECKeeper::checkNSEC3PARAM(const NSEC3PARAMRecordContent& ns3p, string& 
 
 bool DNSSECKeeper::setNSEC3PARAM(const ZoneName& zname, const NSEC3PARAMRecordContent& ns3p, const bool& narrow)
 {
-  if (auto wirelength = zname.operator const DNSName&().wirelength(); wirelength > 222) {
+  if (auto wirelength = DNSName(zname).wirelength(); wirelength > 222) {
     throw runtime_error("Cannot enable NSEC3 for zone '" + zname.toLogString() + "' as it is too long (" + std::to_string(wirelength) + " bytes, maximum is 222 bytes)");
   }
   if(ns3p.d_algorithm != 1) {
@@ -782,14 +782,14 @@ bool DNSSECKeeper::rectifyZone(const ZoneName& zone, string& error, string& info
     if (!res.second && !res.first->second.update) {
       res.first->second.update = res.first->second.auth != rr.auth || res.first->second.ordername != rr.ordername;
     }
-    else if ((!securedZone || narrow) && rr.qname == zone.operator const DNSName&()) {
+    else if ((!securedZone || narrow) && rr.qname == zone) {
       res.first->second.update = true;
     }
 
     if (rr.qtype.getCode())
     {
       qnames.insert(rr.qname);
-      if(rr.qtype.getCode() == QType::NS && rr.qname != zone.operator const DNSName&()) {
+      if(rr.qtype.getCode() == QType::NS && rr.qname != zone) {
         nsset.insert(rr.qname);
       }
       if(rr.qtype.getCode() == QType::DS)
@@ -824,13 +824,13 @@ bool DNSSECKeeper::rectifyZone(const ZoneName& zone, string& error, string& info
     for (auto &loopRR: rrs) {
       bool skip=false;
       DNSName shorter = loopRR.qname;
-      if (shorter != zone.operator const DNSName&() && shorter.chopOff() && shorter != zone.operator const DNSName&()) {
+      if (shorter != zone && shorter.chopOff() && shorter != zone) {
         do {
           if(nsset.count(shorter)) {
             skip=true;
             break;
           }
-        } while(shorter.chopOff() && shorter != zone.operator const DNSName&());
+        } while(shorter.chopOff() && shorter != zone);
       }
       shorter = loopRR.qname;
       if(!skip && (loopRR.qtype.getCode() != QType::NS || !isOptOut)) {
@@ -839,7 +839,7 @@ bool DNSSECKeeper::rectifyZone(const ZoneName& zone, string& error, string& info
           if(!nsec3set.count(shorter)) {
             nsec3set.insert(shorter);
           }
-        } while(shorter != zone.operator const DNSName&() && shorter.chopOff());
+        } while(shorter != zone && shorter.chopOff());
       }
     }
   }
@@ -914,7 +914,7 @@ bool DNSSECKeeper::rectifyZone(const ZoneName& zone, string& error, string& info
       if(doent)
       {
         shorter=qname;
-        while(shorter!=zone.operator const DNSName&() && shorter.chopOff())
+        while(shorter!=zone && shorter.chopOff())
         {
           if(!qnames.count(shorter))
           {

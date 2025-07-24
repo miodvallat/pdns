@@ -270,7 +270,7 @@ void AuthZoneCache::setReplacePending()
 
 void AuthZoneCache::addToView(const std::string& view, const ZoneName& zone)
 {
-  const DNSName& strictZone = zone.operator const DNSName&();
+  const DNSName& strictZone = DNSName(zone);
   auto views = d_views.write_lock();
   AuthZoneCache::ViewsMap& map = *views;
   map[view][strictZone] = zone.getVariant();
@@ -278,7 +278,7 @@ void AuthZoneCache::addToView(const std::string& view, const ZoneName& zone)
 
 bool AuthZoneCache::removeFromView(const std::string& view, const ZoneName& zone)
 {
-  const DNSName& strictZone = zone.operator const DNSName&();
+  const DNSName& strictZone = DNSName(zone);
   auto views = d_views.write_lock();
   AuthZoneCache::ViewsMap& map = *views;
   if (map.count(view) == 0) {

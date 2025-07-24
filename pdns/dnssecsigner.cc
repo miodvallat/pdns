@@ -122,7 +122,7 @@ static int getRRSIGsForRRSET(DNSSECKeeper& dsk, const ZoneName& signer, const DN
   rrc.d_originalttl=signTTL;
   rrc.d_siginception=startOfWeek - 7*86400; // XXX should come from zone metadata
   rrc.d_sigexpire=startOfWeek + 14*86400;
-  rrc.d_signer = signer.operator const DNSName&();
+  rrc.d_signer = signer;
   rrc.d_tag = 0;
 
   DNSSECKeeper::keyset_t keys = dsk.getKeys(signer);
@@ -196,10 +196,10 @@ static bool rrsigncomp(const DNSZoneRecord& a, const DNSZoneRecord& b)
 static bool getBestAuthFromSet(const set<ZoneName>& authSet, const DNSName& name, ZoneName& signer)
 {
   signer.trimToLabels(0);
-  ZoneName sname(name);
+  DNSName sname(name);
   do {
     for (const auto& auth : authSet) {
-      if (auth.operator const DNSName&() == sname.operator const DNSName&()) {
+      if (DNSName(auth) == sname) {
         signer = auth;
         return true;
       }

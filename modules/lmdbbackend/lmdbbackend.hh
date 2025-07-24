@@ -60,10 +60,10 @@ template <class T, typename std::enable_if<std::is_same<T, ZoneName>::value, T>:
 std::string keyConv(const T& t)
 {
   if (t.hasVariant()) {
-    return keyConv(t.operator const DNSName&()) + string(1, (char)0) + keyConv(t.getVariant());
+    return keyConv(DNSName(t)) + string(1, (char)0) + keyConv(t.getVariant());
   }
   else {
-    return keyConv(t.operator const DNSName&());
+    return keyConv(DNSName(t));
   }
 }
 

@@ -1042,17 +1042,17 @@ BOOST_AUTO_TEST_CASE(test_variantnames) {
   ZoneName zone6(R"(sl\\\\\..a\\\..sh\...overflow)");
 
   BOOST_CHECK(zone1.hasVariant());
-  BOOST_CHECK(zone1.operator const DNSName&().isRoot());
+  BOOST_CHECK(DNSName(zone1).isRoot());
 
   BOOST_CHECK(zone2.hasVariant());
-  BOOST_CHECK_EQUAL(zone2.operator const DNSName&().toString(), "bug.less.");
+  BOOST_CHECK_EQUAL(DNSName(zone2).toString(), "bug.less.");
   BOOST_CHECK_EQUAL(zone2.getVariant(), "variant");
 
   BOOST_CHECK(!zone3.hasVariant());
   BOOST_CHECK(!zone4.hasVariant());
 
   BOOST_CHECK(zone5.hasVariant());
-  BOOST_CHECK_EQUAL(zone5.operator const DNSName&().toString(), R"(anti-\\.)");
+  BOOST_CHECK_EQUAL(DNSName(zone5).toString(), R"(anti-\\.)");
   BOOST_CHECK_EQUAL(zone5.getVariant(), "variant");
 
   BOOST_CHECK(zone6.hasVariant());

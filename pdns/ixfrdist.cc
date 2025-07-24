@@ -305,7 +305,7 @@ static void sendNotification(int sock, const ZoneName& domain, const ComboAddres
 {
   std::vector<std::string> meta;
   std::vector<uint8_t> packet;
-  DNSPacketWriter packetWriter(packet, domain.operator const DNSName&(), QType::SOA, 1, Opcode::Notify);
+  DNSPacketWriter packetWriter(packet, domain, QType::SOA, 1, Opcode::Notify);
   packetWriter.getHeader()->id = notificationId;
   packetWriter.getHeader()->aa = true;
 

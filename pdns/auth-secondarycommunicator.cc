@@ -187,7 +187,7 @@ static bool catalogDiff(const DomainInfo& di, vector<CatalogInfo>& fromXFR, vect
         CatalogInfo ci;
         ci.fromJson(d.options, CatalogInfo::CatalogType::Consumer);
 
-        if (di.zone != d.catalog && di.zone.operator const DNSName&() == ci.d_coo) {
+        if (di.zone != d.catalog && ci.d_coo == di.zone) {
           if (ciCreate.d_unique == ci.d_unique) {
             g_log << Logger::Warning << logPrefix << "zone '" << d.zone << "' owner change without state reset, old catalog '" << d.catalog << "', new catalog '" << di.zone << "'" << endl;
 
@@ -272,7 +272,7 @@ static bool catalogDiff(const DomainInfo& di, vector<CatalogInfo>& fromXFR, vect
       }
 
       DNSSECKeeper::clearCaches(zone.first);
-      purgeAuthCaches(zone.first.operator const DNSName&().toString() + "$");
+      purgeAuthCaches(DNSName(zone.first).toString() + "$");
     }
 
     // retrieve new and updated zones with new primaries
@@ -327,7 +327,7 @@ static bool catalogProcess(const DomainInfo& di, vector<DNSResourceRecord>& rrs,
   DNSName rel;
   DNSName unique;
   for (auto& rr : rrs) {
-    if (di.zone.operator const DNSName&() == rr.qname) {
+    if (rr.qname == di.zone) {
       if (rr.qtype == QType::SOA) {
         hasSOA = true;
         continue;
@@ -337,7 +337,7 @@ static bool catalogProcess(const DomainInfo& di, vector<DNSResourceRecord>& rrs,
       }
     }
 
-    else if (rr.qname == g_versiondnsname + di.zone.operator const DNSName&() && rr.qtype == QType::TXT) {
+    else if (rr.qname == g_versiondnsname + di.zone && rr.qtype == QType::TXT) {
       if (hasVersion) {
         g_log << Logger::Warning << logPrefix << "zone '" << di.zone << "', multiple version records found, aborting" << endl;
         return false;
@@ -355,13 +355,13 @@ static bool catalogProcess(const DomainInfo& di, vector<DNSResourceRecord>& rrs,
       }
     }
 
-    else if (rr.qname.isPartOf(g_zonesdnsname + di.zone.operator const DNSName&())) {
+    else if (rr.qname.isPartOf(g_zonesdnsname + di.zone)) {
       if (rel.empty() && !hasVersion) {
         g_log << Logger::Warning << logPrefix << "zone '" << di.zone << "', catalog zone schema version missing, aborting" << endl;
         return false;
       }
 
-      rel = rr.qname.makeRelative(g_zonesdnsname + di.zone.operator const DNSName&());
+      rel = rr.qname.makeRelative(g_zonesdnsname + di.zone);
 
       if (rel.countLabels() == 1 && rr.qtype == QType::PTR) {
         if (!unique.empty()) {
@@ -452,7 +452,7 @@ void CommunicatorClass::ixfrSuck(const ZoneName& domain, const TSIGTriplet& tsig
     soatimes drsoa_soatimes = {di.serial, 0, 0, 0, 0};
     DNSRecord drsoa;
     drsoa.setContent(std::make_shared<SOARecordContent>(g_rootdnsname, g_rootdnsname, drsoa_soatimes));
-    auto deltas = getIXFRDeltas(remote, domain.operator const DNSName&(), drsoa, xfrTimeout, false, tsig, laddr.sin4.sin_family != 0 ? &laddr : nullptr, ((size_t)::arg().asNum("xfr-max-received-mbytes")) * 1024 * 1024);
+    auto deltas = getIXFRDeltas(remote, domain, drsoa, xfrTimeout, false, tsig, laddr.sin4.sin_family != 0 ? &laddr : nullptr, ((size_t)::arg().asNum("xfr-max-received-mbytes")) * 1024 * 1024);
     status.numDeltas = deltas.size();
     //    cout<<"Got "<<deltas.size()<<" deltas from serial "<<di.serial<<", applying.."<<endl;
 
@@ -484,7 +484,7 @@ void CommunicatorClass::ixfrSuck(const ZoneName& domain, const TSIGTriplet& tsig
         vector<DNSRecord> rrset;
         {
           DNSZoneRecord zrr;
-          di.backend->lookup(QType(g.first.second), g.first.first.operator const DNSName&() + domain.operator const DNSName&(), di.id);
+          di.backend->lookup(QType(g.first.second), g.first.first + domain, di.id);
           while (di.backend->get(zrr)) {
             zrr.dr.d_name.makeUsRelative(domain);
             rrset.push_back(zrr.dr);
@@ -506,7 +506,7 @@ void CommunicatorClass::ixfrSuck(const ZoneName& domain, const TSIGTriplet& tsig
         vector<DNSResourceRecord> replacement;
         for (const auto& dr : rrset) {
           auto rr = DNSResourceRecord::fromWire(dr);
-          rr.qname += domain.operator const DNSName&();
+          rr.qname += domain;
           rr.domain_id = di.id;
           if (dr.d_type == QType::SOA) {
             //            cout<<"New SOA: "<<x.d_content->getZoneRepresentation()<<endl;
@@ -517,7 +517,7 @@ void CommunicatorClass::ixfrSuck(const ZoneName& domain, const TSIGTriplet& tsig
           replacement.emplace_back(std::move(rr));
         }
 
-        di.backend->replaceRRSet(di.id, g.first.first.operator const DNSName&() + domain.operator const DNSName&(), QType(g.first.second), replacement);
+        di.backend->replaceRRSet(di.id, DNSName(g.first.first) + domain, QType(g.first.second), replacement);
       }
       di.backend->commitTransaction();
     }
@@ -761,10 +761,10 @@ void CommunicatorClass::suck(const ZoneName& domain, const ComboAddress& remote,
           rrs.reserve(axfr.size());
           for (const auto& dr : axfr) {
             auto rr = DNSResourceRecord::fromWire(dr);
-            rr.qname += domain.operator const DNSName&();
+            rr.qname += domain;
             rr.qname.makeUsLowerCase();
             rr.domain_id = zs.domain_id;
-            if (!processRecordForZS(domain.operator const DNSName&(), firstNSEC3, rr, zs)) {
+            if (!processRecordForZS(domain, firstNSEC3, rr, zs)) {
               continue;
             }
             if (dr.d_type == QType::SOA) {
@@ -776,7 +776,7 @@ void CommunicatorClass::suck(const ZoneName& domain, const ComboAddress& remote,
         }
         else {
           g_log << Logger::Warning << logPrefix << "got " << zs.numDeltas << " delta" << addS(zs.numDeltas) << ", zone committed with serial " << zs.soa_serial << endl;
-          purgeAuthCaches(domain.operator const DNSName&().toString() + "$");
+          purgeAuthCaches(domain.toString() + "$");
           return;
         }
       }
@@ -784,7 +784,7 @@ void CommunicatorClass::suck(const ZoneName& domain, const ComboAddress& remote,
 
     if (rrs.empty()) {
       g_log << Logger::Notice << logPrefix << "starting AXFR" << endl;
-      rrs = doAxfr(remote, domain.operator const DNSName&(), tt, laddr, pdl, zs);
+      rrs = doAxfr(remote, domain, tt, laddr, pdl, zs);
       logPrefix = "A" + logPrefix; // XFR -> AXFR
       g_log << Logger::Notice << logPrefix << "retrieval finished" << endl;
     }
@@ -883,7 +883,7 @@ void CommunicatorClass::suck(const ZoneName& domain, const ComboAddress& remote,
         if (zs.nsset.count(shorter) && rr.qtype.getCode() != QType::DS)
           rr.auth = false;
 
-        if (shorter == domain.operator const DNSName&()) { // stop at apex
+        if (shorter == domain) { // stop at apex
           break;
         }
       } while (shorter.chopOff());
@@ -945,7 +945,7 @@ void CommunicatorClass::suck(const ZoneName& domain, const ComboAddress& remote,
     // Insert empty non-terminals
     if (doent && !nonterm.empty()) {
       if (zs.isNSEC3) {
-        di.backend->feedEnts3(zs.domain_id, domain.operator const DNSName&(), nonterm, zs.ns3pr, zs.isNarrow);
+        di.backend->feedEnts3(zs.domain_id, domain, nonterm, zs.ns3pr, zs.isNarrow);
       }
       else
         di.backend->feedEnts(zs.domain_id, nonterm);
@@ -954,7 +954,7 @@ void CommunicatorClass::suck(const ZoneName& domain, const ComboAddress& remote,
     di.backend->commitTransaction();
     transaction = false;
     di.backend->setFresh(zs.domain_id);
-    purgeAuthCaches(domain.operator const DNSName&().toString() + "$");
+    purgeAuthCaches(DNSName(domain).toString() + "$");
 
     g_log << Logger::Warning << logPrefix << "zone committed with serial " << zs.soa_serial << endl;
 
@@ -1054,11 +1054,11 @@ struct SecondarySenderReceiver
   {
     shuffle(dni.di.primaries.begin(), dni.di.primaries.end(), pdns::dns_random_engine());
     try {
-      return {dni.di.zone.operator const DNSName&(),
+      return {dni.di.zone,
               *dni.di.primaries.begin(),
               d_resolver.sendResolve(*dni.di.primaries.begin(),
                                      dni.localaddr,
-                                     dni.di.zone.operator const DNSName&(),
+                                     dni.di.zone,
                                      QType::SOA,
                                      nullptr,
                                      dni.dnssecOk, dni.tsigkeyname, dni.tsigalgname, dni.tsigsecret)};
@@ -1314,7 +1314,7 @@ void CommunicatorClass::secondaryRefresh(PacketHandler* P)
     SOAData sd;
     try {
       // Use UeberBackend cache for SOA. Cache gets cleared after AXFR/IXFR.
-      B->lookup(QType(QType::SOA), di.zone.operator const DNSName&(), di.id, nullptr);
+      B->lookup(QType(QType::SOA), di.zone, di.id, nullptr);
       DNSZoneRecord zr;
       hasSOA = B->get(zr);
       if (hasSOA) {
@@ -1337,7 +1337,7 @@ void CommunicatorClass::secondaryRefresh(PacketHandler* P)
     else if (hasSOA && theirserial == ourserial) {
       uint32_t maxExpire = 0, maxInception = 0;
       if (checkSignatures && dk.isPresigned(di.zone)) {
-        B->lookup(QType(QType::RRSIG), di.zone.operator const DNSName&(), di.id); // can't use DK before we are done with this lookup!
+        B->lookup(QType(QType::RRSIG), di.zone, di.id); // can't use DK before we are done with this lookup!
         DNSZoneRecord zr;
         while (B->get(zr)) {
           auto rrsig = getRR<RRSIGRecordContent>(zr.dr);

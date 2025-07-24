@@ -53,7 +53,7 @@ void CommunicatorClass::queueNotifyDomain(const DomainInfo& di, UeberBackend* B)
 
   try {
     if (d_onlyNotify.size()) {
-      B->lookup(QType(QType::NS), di.zone.operator const DNSName&(), di.id);
+      B->lookup(QType(QType::NS), di.zone, di.id);
       while (B->get(rr))
         nsset.insert(getRR<NSRecordContent>(rr.dr)->getNS());
 
@@ -139,7 +139,7 @@ void CommunicatorClass::getUpdatedProducers(UeberBackend* B, vector<DomainInfo>&
   std::string metaHash;
   std::string mapHash;
   for (auto& ch : catalogHashes) {
-    if (catalogs.count(ch.first.operator const DNSName&()) == 0) {
+    if (catalogs.count(ch.first) == 0) {
       g_log << Logger::Warning << "orphaned member zones found with catalog '" << ch.first << "'" << endl;
       continue;
     }
@@ -204,7 +204,7 @@ void CommunicatorClass::primaryUpdateCheck(PacketHandler* P)
   for (auto& di : cmdomains) {
     // VIEWS TODO: if this zone has a variant, try to figure out which
     // views contain it, and purge these views only.
-    purgeAuthCachesExact(di.zone.operator const DNSName&());
+    purgeAuthCachesExact(di.zone);
     g_zoneCache.add(di.zone, di.id);
     queueNotifyDomain(di, B);
     di.backend->setNotified(di.id, di.serial);
@@ -295,7 +295,7 @@ void CommunicatorClass::sendNotification(int sock, const ZoneName& domain, const
   }
 
   vector<uint8_t> packet;
-  DNSPacketWriter pwriter(packet, domain.operator const DNSName&(), QType::SOA, 1, Opcode::Notify);
+  DNSPacketWriter pwriter(packet, domain, QType::SOA, 1, Opcode::Notify);
   pwriter.getHeader()->id = notificationId;
   pwriter.getHeader()->aa = true;
 

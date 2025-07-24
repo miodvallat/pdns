@@ -327,7 +327,7 @@ static bool endsOn(const string& domain, const string& suffix)
 /** strips a domain suffix from a domain, returns true if it stripped */
 static bool stripDomainSuffix(string* qname, const ZoneName& zonename)
 {
-  std::string domain = zonename.operator const DNSName&().toString();
+  std::string domain = DNSName(zonename).toString();
 
   if (!endsOn(*qname, domain)) {
     return false;
@@ -357,7 +357,7 @@ bool Bind2Backend::feedRecord(const DNSResourceRecord& rr, const DNSName& /* ord
     qname = rr.qname.toString();
   }
   else if (rr.qname.isPartOf(d_transaction_qname)) {
-    if (rr.qname == d_transaction_qname.operator const DNSName&()) {
+    if (rr.qname == d_transaction_qname) {
       qname = "@";
     }
     else {
@@ -647,7 +647,7 @@ string Bind2Backend::DLReloadNowHandler(const vector<string>& parts, Utility::pi
         ret << *i << ": [missing]\n";
       else
         ret << *i << ": " << (bbd.d_wasRejectedLastReload ? "[rejected]" : "") << "\t" << bbd.d_status << "\n";
-      purgeAuthCaches(zone.operator const DNSName&().toString() + "$");
+      purgeAuthCaches(DNSName(zone).toString() + "$");
       DNSSECKeeper::clearMetaCache(zone);
     }
     else
@@ -893,7 +893,7 @@ void Bind2Backend::fixupOrderAndAuth(std::shared_ptr<recordstorage_t>& records, 
 
     if (!skip && nsec3zone && iter->qtype != QType::RRSIG && (iter->auth || (iter->qtype == QType::NS && (ns3pr.d_flags == 0u)) || (dssets.count(iter->qname) != 0u))) {
       Bind2DNSRecord bdr = *iter;
-      bdr.nsec3hash = toBase32Hex(hashQNameWithSalt(ns3pr, bdr.qname + zoneName.operator const DNSName&()));
+      bdr.nsec3hash = toBase32Hex(hashQNameWithSalt(ns3pr, bdr.qname + zoneName));
       records->replace(iter, bdr);
     }
 
@@ -944,7 +944,7 @@ void Bind2Backend::doEmptyNonTerminals(std::shared_ptr<recordstorage_t>& records
   rr.ttl = 0;
   for (auto& nt : nonterm) {
     string hashed;
-    rr.qname = nt.first + zoneName.operator const DNSName&();
+    rr.qname = nt.first + zoneName;
     if (nsec3zone && nt.second)
       hashed = toBase32Hex(hashQNameWithSalt(ns3pr, rr.qname));
     insertRecord(records, zoneName, rr.qname, rr.qtype, rr.content, rr.ttl, hashed, &nt.second);
@@ -1215,7 +1215,7 @@ bool Bind2Backend::getBeforeAndAfterNamesAbsolute(domainid_t id, const DNSName& 
         iter = --hashindex.end();
       before = DNSName(iter->nsec3hash);
     }
-    unhashed = iter->qname + bbd.d_name.operator const DNSName&();
+    unhashed = iter->qname + bbd.d_name;
 
     return true;
   }

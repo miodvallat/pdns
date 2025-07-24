@@ -95,7 +95,7 @@ static void callback_simple( unsigned int domain_id, const DNSName &domain, cons
         dn += g_zonename.toStringNoDot() + "," + g_basedn;
         cout << "dn: " << dn << endl;
 
-        if( !host.hasLabels() ) { host = g_zonename.operator const DNSName&(); }
+        if( !host.hasLabels() ) { host = g_zonename; }
 
         if( !g_entries[dn] )
         {

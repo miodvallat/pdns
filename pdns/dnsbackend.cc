@@ -295,7 +295,7 @@ bool DNSBackend::getSOA(const ZoneName& domain, domainid_t zoneId, SOAData& soaD
     zoneId = domaininfo.id;
   }
   // Safe for zoneId to be UnknownDomainID here - it won't be the case for variants, see above
-  this->lookup(QType(QType::SOA), domain.operator const DNSName&(), zoneId);
+  this->lookup(QType(QType::SOA), domain, zoneId);
   S.inc("backend-queries");
 
   DNSResourceRecord resourceRecord;
@@ -353,7 +353,7 @@ bool DNSBackend::getBeforeAndAfterNames(domainid_t domainId, const ZoneName& zon
 {
   DNSName unhashed;
   bool ret = this->getBeforeAndAfterNamesAbsolute(domainId, qname.makeRelative(zonename).makeLowerCase(), unhashed, before, after);
-  DNSName lczonename = zonename.makeLowerCase().operator const DNSName&();
+  DNSName lczonename = zonename.makeLowerCase();
   before += lczonename;
   after += lczonename;
   return ret;

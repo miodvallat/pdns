@@ -235,13 +235,6 @@ public:
   };
   RawLabelsVisitor getRawLabelsVisitor() const;
 
-#if defined(PDNS_AUTH) // [
-  // Sugar while ZoneName::operator DNSName are made explicit
-  bool isPartOf(const ZoneName& rhs) const;
-  DNSName makeRelative(const ZoneName& zone) const;
-  void makeUsRelative(const ZoneName& zone);
-#endif // ]
-
 private:
   string_t d_storage;
 
@@ -292,8 +285,8 @@ extern const DNSName g_hmacsha512dnsname;    // hmac-sha512
 // variant is never part of a DNS packet; it can only be used by backends to
 // perform specific extra processing.
 // Variant names are limited to [a-z0-9_-].
-// Conversions between DNSName and ZoneName are allowed, but must be explicit;
-// conversions to DNSName lose the variant part.
+// Conversions between DNSName and ZoneName are allowed, and lose the variant
+// part.
 class ZoneName
 {
 public:
@@ -323,7 +316,6 @@ public:
   explicit ZoneName(const DNSName& name, std::string_view variant = ""sv) : d_name(name), d_variant(variant) {}
   explicit ZoneName(std::string_view name, std::string_view::size_type sep);
 
-  bool isPartOf(const ZoneName& rhs) const { return d_name.isPartOf(rhs.d_name); }
   bool isPartOf(const DNSName& rhs) const { return d_name.isPartOf(rhs); }
   bool operator==(const ZoneName& rhs) const { return d_name == rhs.d_name && d_variant == rhs.d_variant; }
   bool operator!=(const ZoneName& rhs) const { return !operator==(rhs); }
@@ -353,8 +345,8 @@ public:
   inline bool canonCompare(const ZoneName& rhs) const { return canonCompare_three_way(rhs) < 0; }
 
   // Conversion from ZoneName to DNSName
-  explicit operator const DNSName&() const { return d_name; }
-  explicit operator DNSName&() { return d_name; }
+  operator const DNSName&() const { return d_name; }
+  operator DNSName&() { return d_name; }
 
   bool hasVariant() const { return !d_variant.empty(); }
   std::string getVariant() const { return d_variant; }

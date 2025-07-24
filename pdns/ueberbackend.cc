@@ -411,7 +411,7 @@ bool UeberBackend::fillSOAFromZoneRecord(ZoneName& shorter, const domainid_t zon
 
   DNSZoneRecord zoneRecord;
   if (!get(zoneRecord)) {
-    DLOG(g_log << Logger::Info << "Backend returned no SOA for zone '" << shorter.toLogString() << "', which it reported as existing " << endl);
+    DLOG(g_log << Logger::Info << "Backend returned no SOA for zone '" << shorter << "', which it reported as existing " << endl);
     return false;
   }
 
@@ -426,7 +426,7 @@ bool UeberBackend::fillSOAFromZoneRecord(ZoneName& shorter, const domainid_t zon
     fillSOAData(zoneRecord, *soaData);
   }
   catch (...) {
-    g_log << Logger::Warning << "Backend returned a broken SOA for zone '" << shorter.toLogString() << "'" << endl;
+    g_log << Logger::Warning << "Backend returned a broken SOA for zone '" << shorter << "'" << endl;
 
     while (get(zoneRecord)) {
       ;

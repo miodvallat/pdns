@@ -69,7 +69,7 @@ public:
   }
   SSqlStatement* bind(const string& name, const ZoneName& value)
   {
-    return bind(name, value.operator const DNSName&());
+    return bind(name, DNSName(value));
   }
   virtual SSqlStatement* bindNull(const string& name) = 0;
   virtual SSqlStatement* execute() = 0;

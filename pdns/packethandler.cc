@@ -1343,7 +1343,7 @@ void PacketHandler::completeANYRecords(DNSPacket& p, std::unique_ptr<DNSPacket>&
 bool PacketHandler::tryAuthSignal(DNSPacket& p, std::unique_ptr<DNSPacket>& r, DNSName &target) // NOLINT(readability-identifier-length)
 {
   DLOG(g_log<<Logger::Warning<<"Let's try authenticated DNSSEC bootstrapping (RFC 9615) ..."<<endl);
-  if(d_sd.zonename.operator const DNSName&().countLabels() == 0 || !pdns_iequals(d_sd.zonename.operator const DNSName&().getRawLabel(0), "_signal") || !d_dk.isSignalingZone(d_sd.zonename)) {
+  if(DNSName(d_sd.zonename).countLabels() == 0 || !pdns_iequals(DNSName(d_sd.zonename).getRawLabel(0), "_signal") || !d_dk.isSignalingZone(d_sd.zonename)) {
     return false;
   }
 
@@ -1696,7 +1696,7 @@ bool PacketHandler::opcodeQueryInner2(DNSPacket& pkt, queryState &state, bool re
 
   if (!retargeted) {
     state.r->qdomainzone = d_sd.zonename;
-  } else if (!d_doResolveAcrossZones && state.r->qdomainzone.operator const DNSName&() != d_sd.qname()) {
+  } else if (!d_doResolveAcrossZones && DNSName(state.r->qdomainzone) != d_sd.qname()) {
     // We are following a retarget outside the initial zone. Config asked us not to do that.
     return true;
   }

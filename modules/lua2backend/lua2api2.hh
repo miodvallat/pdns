@@ -194,7 +194,7 @@ public:
       throw PDNSException("list attempted while another was running");
 
     logCall("list", "target=" << target << ",domain_id=" << domain_id);
-    list_result_t result = f_list(target.operator const DNSName&(), domain_id);
+    list_result_t result = f_list(target, domain_id);
 
     if (result.which() == 0)
       return false;
@@ -302,7 +302,7 @@ public:
     }
 
     logCall("get_domaininfo", "domain=" << domain);
-    get_domaininfo_result_t result = f_get_domaininfo(domain.operator const DNSName&());
+    get_domaininfo_result_t result = f_get_domaininfo(domain);
 
     if (result.which() == 0)
       return false;
@@ -334,7 +334,7 @@ public:
       return false;
 
     logCall("get_all_domain_metadata", "name=" << name);
-    get_all_domain_metadata_result_t result = f_get_all_domain_metadata(name.operator const DNSName&());
+    get_all_domain_metadata_result_t result = f_get_all_domain_metadata(name);
     if (result.which() == 0)
       return false;
 
@@ -354,7 +354,7 @@ public:
       return false;
 
     logCall("get_domain_metadata", "name=" << name << ",kind=" << kind);
-    get_domain_metadata_result_t result = f_get_domain_metadata(name.operator const DNSName&(), kind);
+    get_domain_metadata_result_t result = f_get_domain_metadata(name, kind);
     if (result.which() == 0)
       return false;
 
@@ -372,7 +372,7 @@ public:
       return false;
 
     logCall("get_domain_keys", "name=" << name);
-    get_domain_keys_result_t result = f_get_domain_keys(name.operator const DNSName&());
+    get_domain_keys_result_t result = f_get_domain_keys(name);
 
     if (result.which() == 0)
       return false;

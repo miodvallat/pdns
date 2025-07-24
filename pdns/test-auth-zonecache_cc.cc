@@ -164,18 +164,18 @@ BOOST_AUTO_TEST_CASE(test_netmask)
   Netmask nm(makeComboAddress("20.25.4.24")); // NOLINT(readability-identifier-length)
   view = cache.getViewFromNetwork(&nm);
   BOOST_CHECK_EQUAL(view, inner);
-  variant = cache.getVariantFromView(bl.operator const DNSName&(), view);
+  variant = cache.getVariantFromView(bl, view);
   if (nm != innerMask) {
     BOOST_FAIL("bug.less lookup from inner zone reported wrong network " + nm.toString());
   }
-  found = cache.getEntry(ZoneName(bl.operator const DNSName&(), variant), zoneId);
+  found = cache.getEntry(ZoneName(bl, variant), zoneId);
   if (!found) {
     BOOST_FAIL("bug.less lookup from inner zone should have succeeded");
   }
   if (zoneId != 42) {
     BOOST_FAIL("bug.less lookup from inner zone reported wrong id " + std::to_string(zoneId));
   }
-  variant = cache.getVariantFromView(fb.operator const DNSName&(), view);
+  variant = cache.getVariantFromView(fb, view);
   BOOST_CHECK(variant.empty());
   if (nm != innerMask) {
     BOOST_FAIL("fewer.bugs lookup from inner zone reported wrong network " + nm.toString());
@@ -192,18 +192,18 @@ BOOST_AUTO_TEST_CASE(test_netmask)
   nm = makeComboAddress("20.25.20.25");
   view = cache.getViewFromNetwork(&nm);
   BOOST_CHECK_EQUAL(view, outer);
-  variant = cache.getVariantFromView(bl.operator const DNSName&(), view);
+  variant = cache.getVariantFromView(bl, view);
   if (nm != outerMask) {
     BOOST_FAIL("bug.less lookup from outer zone reported wrong network " + nm.toString());
   }
-  found = cache.getEntry(ZoneName(bl.operator const DNSName&(), variant), zoneId);
+  found = cache.getEntry(ZoneName(bl, variant), zoneId);
   if (!found) {
     BOOST_FAIL("bug.less lookup from outer zone should have succeeded");
   }
   if (zoneId != 43) {
     BOOST_FAIL("bug.less lookup from outer zone reported wrong id " + std::to_string(zoneId));
   }
-  variant = cache.getVariantFromView(bp.operator const DNSName&(), view);
+  variant = cache.getVariantFromView(bp, view);
   BOOST_CHECK(variant.empty());
   if (nm != outerMask) {
     BOOST_FAIL("bad.puns lookup from outer zone reported wrong network " + nm.toString());
@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE(test_netmask)
   nm = makeComboAddress("1.2.3.4");
   view = cache.getViewFromNetwork(&nm);
   BOOST_CHECK_EQUAL(view, "");
-  variant = cache.getVariantFromView(nonexistent.operator const DNSName&(), view);
+  variant = cache.getVariantFromView(nonexistent, view);
   BOOST_CHECK(variant.empty());
   found = cache.getEntry(nonexistent, zoneId);
   if (found) {
@@ -228,7 +228,7 @@ BOOST_AUTO_TEST_CASE(test_netmask)
   }
   view = cache.getViewFromNetwork(&nm);
   BOOST_CHECK_EQUAL(view, "");
-  variant = cache.getVariantFromView(bl.operator const DNSName&(), view);
+  variant = cache.getVariantFromView(bl, view);
   BOOST_CHECK(variant.empty());
   found = cache.getEntry(bl, zoneId);
   if (found) {
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE(test_netmask)
   }
   view = cache.getViewFromNetwork(&nm);
   BOOST_CHECK_EQUAL(view, "");
-  variant = cache.getVariantFromView(bp.operator const DNSName&(), view);
+  variant = cache.getVariantFromView(bp, view);
   BOOST_CHECK(variant.empty());
   found = cache.getEntry(bp, zoneId);
   if (!found) {

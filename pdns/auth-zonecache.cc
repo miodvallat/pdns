@@ -91,7 +91,7 @@ std::string AuthZoneCache::getViewFromNetwork(Netmask* net)
   return view;
 }
 
-std::string AuthZoneCache::getVariantFromView(const ZoneName& zone, const std::string& view)
+std::string AuthZoneCache::getVariantFromView(const DNSName& zone, const std::string& view)
 {
   string variant{};
 
@@ -99,8 +99,8 @@ std::string AuthZoneCache::getVariantFromView(const ZoneName& zone, const std::s
     auto views = d_views.read_lock();
     if (views->count(view) == 1) {
       const auto& viewmap = views->at(view);
-      if (viewmap.count(zone.operator const DNSName&()) == 1) {
-        variant = viewmap.at(zone.operator const DNSName&());
+      if (viewmap.count(zone) == 1) {
+        variant = viewmap.at(zone);
       }
     }
   }
@@ -112,9 +112,8 @@ void AuthZoneCache::setZoneVariant(DNSPacket& packet)
 {
   Netmask net = packet.getRealRemote();
   string view = getViewFromNetwork(&net);
-  packet.qdomainzone = ZoneName(packet.qdomain);
-  string variant = getVariantFromView(packet.qdomainzone, view);
-  packet.qdomainzone.setVariant(variant);
+  string variant = getVariantFromView(packet.qdomain, view);
+  packet.qdomainzone = ZoneName(packet.qdomain, variant);
 }
 #endif // ] PDNS_AUTH
 

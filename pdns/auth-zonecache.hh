@@ -58,7 +58,7 @@ public:
   std::string getViewFromNetwork(Netmask* net);
 
   // Variant lookup
-  std::string getVariantFromView(const ZoneName& zone, const std::string& view);
+  std::string getVariantFromView(const DNSName& zone, const std::string& view);
   void setZoneVariant(DNSPacket& packet);
 
   size_t size() { return *d_statnumentries; } //!< number of entries in the cache

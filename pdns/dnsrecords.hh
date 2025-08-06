@@ -1308,4 +1308,4 @@ class MOADNSParser;
 bool getEDNSOpts(const MOADNSParser& mdp, EDNSOpts* eo);
 void reportAllTypes();
 ComboAddress getAddr(const DNSRecord& dr, uint16_t defport=0);
-void checkHostnameCorrectness(const DNSResourceRecord& rr);
+void checkHostnameCorrectness(const DNSResourceRecord& rr, bool allowUnderscore = false);

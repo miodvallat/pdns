@@ -940,6 +940,11 @@ static int checkZone(DNSSECKeeper &dk, UeberBackend &B, const ZoneName& zone, co
   else
     records=*suppliedrecords;
 
+  string underscores{};
+  di.backend->getDomainMetadataOne(zone, "RFC1123-CONFORMANCE", underscores);
+  // Metadata absent implies strict conformance
+  bool allowUnderscores = underscores == "0";
+
   for(auto &rr : records) { // we modify this
     if(rr.qtype.getCode() == QType::TLSA)
       tlsas.insert(rr.qname);
@@ -1151,7 +1156,7 @@ static int checkZone(DNSSECKeeper &dk, UeberBackend &B, const ZoneName& zone, co
 
     // Check if the DNSNames that should be hostnames, are hostnames
     try {
-      checkHostnameCorrectness(rr);
+      checkHostnameCorrectness(rr, allowUnderscores);
     } catch (const std::exception& e) {
       cout << "[Warning] " << rr.qtype.toString() << " record in zone '" << zone << ": " << e.what() << endl;
       numwarnings++;

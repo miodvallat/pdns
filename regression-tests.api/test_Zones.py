@@ -2590,6 +2590,37 @@ $NAME$  1D  IN  SOA ns1.example.org. hostmaster.example.org. (
         modified_at_new = data['rrsets'][0]['records'][0]['modified_at']
         self.assertGreater(modified_at_new, modified_at)
 
+    def test_underscore_names(self):
+        name = unique_zone_name()
+        self.create_zone(name=name, kind='Native')
+
+        payload_metadata = {"type": "Metadata", "kind": "RFC1123-CONFORMANCE", "metadata": ["0"]}
+        r = self.session.post(self.url("/api/v1/servers/localhost/zones/" + name + "/metadata"),
+                              data=json.dumps(payload_metadata))
+        rdata = r.json()
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(rdata["metadata"], payload_metadata["metadata"])
+
+        rrset = {
+            'changetype': 'replace',
+            'name': "_underscores_r_us_."+name,
+            'type': "A",
+            'ttl': 3600,
+            'records': [{
+                "content": "42.42.42.42",
+                "disabled": False,
+            }],
+        }
+        payload = {'rrsets': [rrset]}
+        r = self.session.patch(
+            self.url("/api/v1/servers/localhost/zones/" + name),
+            data=json.dumps(payload),
+            headers={'content-type': 'application/json'})
+        self.assert_success(r)
+        data = self.get_zone(name)
+        # check our record has appeared
+        self.assertEqual(get_rrset(data, rrset['name'], 'A')['records'], rrset['records'])
+
 @unittest.skipIf(not is_auth(), "Not applicable")
 class AuthRootZone(ApiTestCase, AuthZonesHelperMixin):
 

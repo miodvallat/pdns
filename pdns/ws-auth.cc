@@ -973,6 +973,7 @@ static bool isValidMetadataKind(const string& kind, bool readonly)
     {"PRESIGNED", true},
     {"PUBLISH-CDNSKEY", false},
     {"PUBLISH-CDS", false},
+    {"RFC1123-CONFORMANCE", false},
     {"SIGNALING-ZONE", false},
     {"SLAVE-RENOTIFY", false},
     {"SOA-EDIT", true},
@@ -1613,6 +1614,14 @@ static void gatherRecordsFromZone(const std::string& zonestring, vector<DNSResou
   }
 }
 
+static bool areUnderscoresAllowed(const ZoneName& zonename, DNSBackend& backend)
+{
+  string underscores{};
+  backend.getDomainMetadataOne(zonename, "RFC1123-CONFORMANCE", underscores);
+  // Metadata absent implies strict conformance
+  return underscores == "0";
+}
+
 /** Throws ApiException if records which violate RRset constraints are present.
  *  NOTE: sorts records in-place.
  *
@@ -1621,7 +1630,7 @@ static void gatherRecordsFromZone(const std::string& zonestring, vector<DNSResou
  *   *) no duplicates for QTypes that can only be present once per RRset
  *   *) hostnames are hostnames
  */
-static void checkNewRecords(vector<DNSResourceRecord>& records, const ZoneName& zone)
+static void checkNewRecords(vector<DNSResourceRecord>& records, const ZoneName& zone, bool allowUnderscores)
 {
   sort(records.begin(), records.end(),
        [](const DNSResourceRecord& rec_a, const DNSResourceRecord& rec_b) -> bool {
@@ -1656,7 +1665,7 @@ static void checkNewRecords(vector<DNSResourceRecord>& records, const ZoneName& 
 
     // Check if the DNSNames that should be hostnames, are hostnames
     try {
-      checkHostnameCorrectness(rec);
+      checkHostnameCorrectness(rec, allowUnderscores);
     }
     catch (const std::exception& e) {
       throw ApiException("RRset " + rec.qname.toString() + " IN " + rec.qtype.toString() + ": " + e.what());
@@ -2016,7 +2025,7 @@ static void apiServerZonesPOST(HttpRequest* req, HttpResponse* resp)
     }
   }
 
-  checkNewRecords(new_records, zonename);
+  checkNewRecords(new_records, zonename, false); // no RFC1123-CONFORMANCE metadata on new zones
 
   if (boolFromJson(document, "dnssec", false)) {
     checkDefaultDNSSECAlgos();
@@ -2190,7 +2199,8 @@ static void apiServerZoneDetailPUT(HttpRequest* req, HttpResponse* resp)
       throw ApiException("Modifying RRsets in Consumer zones is unsupported");
     }
 
-    checkNewRecords(new_records, zoneData.zoneName);
+    bool allowUnderscores = areUnderscoresAllowed(zoneData.zoneName, *zoneData.domainInfo.backend);
+    checkNewRecords(new_records, zoneData.zoneName, allowUnderscores);
 
     zoneData.domainInfo.backend->startTransaction(zoneData.zoneName, zoneData.domainInfo.id);
     for (auto& resourceRecord : new_records) {
@@ -2357,6 +2367,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
     domainInfo.backend->getDomainMetadataOne(zonename, "SOA-EDIT-API", soa_edit_api_kind);
     domainInfo.backend->getDomainMetadataOne(zonename, "SOA-EDIT", soa_edit_kind);
     bool soa_edit_done = false;
+    bool allowUnderscores = areUnderscoresAllowed(zonename, *domainInfo.backend);
 
     set<std::tuple<DNSName, QType, string>> seen;
 
@@ -2409,7 +2420,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
                 soa_edit_done = increaseSOARecord(resourceRecord, soa_edit_api_kind, soa_edit_kind, zonename);
               }
             }
-            checkNewRecords(new_records, zonename);
+            checkNewRecords(new_records, zonename, allowUnderscores);
           }
 
           if (replace_comments) {

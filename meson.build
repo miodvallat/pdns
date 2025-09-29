@@ -557,6 +557,7 @@ common_sources += files(
   src_dir / 'lock.hh',
   src_dir / 'logger.cc',
   src_dir / 'logger.hh',
+  src_dir / 'logging.cc',
   src_dir / 'logging.hh',
   src_dir / 'lua-auth4.cc',
   src_dir / 'lua-auth4.hh',

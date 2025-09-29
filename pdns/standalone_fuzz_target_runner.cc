@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <vector>
 
+bool g_slogStructured{false};
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
 extern "C" __attribute__((weak)) int LLVMFuzzerInitialize(int* argc, char*** argv);
 

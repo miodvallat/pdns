@@ -2,6 +2,7 @@
 #include <csignal>
 #include <fcntl.h>
 #include <fstream>
+#include <iomanip>
 #include <termios.h>            //termios, TCSANOW, ECHO, ICANON
 #include <utility>
 #include <sys/stat.h>
@@ -57,6 +58,9 @@ uint16_t g_maxNSEC3Iterations{0};
 
 namespace po = boost::program_options;
 po::variables_map g_vm;
+
+bool g_slogStructured{false};
+static Logger::Urgency s_logUrgency;
 
 string g_programname="pdns";
 
@@ -5952,6 +5956,40 @@ static void checkCommandSyntax()
 }
 #endif
 
+static void pdnsutilLoggerBackend(const Logging::Entry& entry)
+{
+  static thread_local std::stringstream buf;
+
+  // First map SL priority to syslog's Urgency
+  Logger::Urgency urg = entry.d_priority != 0 ? Logger::Urgency(entry.d_priority) : Logger::Info;
+  if (urg > s_logUrgency) {
+    // We do not log anything if the Urgency of the message is lower than the requested loglevel.
+    // Not that lower Urgency means higher number.
+    return;
+  }
+  buf.str("");
+  buf << "msg=" << std::quoted(entry.message);
+  if (entry.error) {
+    buf << " error=" << std::quoted(entry.error.get());
+  }
+
+  if (entry.name) {
+    buf << " subsystem=" << std::quoted(entry.name.get());
+  }
+  buf << " level=" << std::quoted(std::to_string(entry.level));
+  if (entry.d_priority != 0) {
+    buf << " prio=" << std::quoted(Logr::Logger::toString(entry.d_priority));
+  }
+  std::array<char, 64> timebuf{};
+  buf << " ts=" << std::quoted(Logging::toTimestampStringMilli(entry.d_timestamp, timebuf));
+  for (auto const& value : entry.values) {
+    buf << " ";
+    buf << value.first << "=" << std::quoted(value.second);
+  }
+
+  g_log << urg << buf.str() << endl;
+}
+
 int main(int argc, char** argv)
 try
 {
@@ -6010,6 +6048,12 @@ try
   }
 
   loadMainConfig(g_vm["config-dir"].as<string>());
+
+  s_logUrgency = (Logger::Urgency)(::arg().asNum("loglevel"));
+
+  g_slog = Logging::Logger::create(pdnsutilLoggerBackend);
+  auto log = g_slog->withName("config");
+  ::arg().setSLog(log);
 
   std::string writtencommand;
   if (commandEntry command; parseCommand(cmds, writtencommand, command)) {

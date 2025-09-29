@@ -255,9 +255,10 @@ void WebServer::handleRequest(HttpRequest& req, HttpResponse& resp) const
   // set default headers
   resp.headers["Content-Type"] = "text/html; charset=utf-8";
 
-#ifdef RECURSOR
-    auto log = req.d_slog->withValues("urlpath", Logging::Loggable(req.url.path));
-#endif
+  std::shared_ptr<Logr::Logger> log;
+  if (g_slogStructured) {
+    log = req.d_slog->withValues("urlpath", Logging::Loggable(req.url.path));
+  }
 
   try {
     if (!req.complete) {
@@ -327,12 +328,12 @@ void WebServer::handleRequest(HttpRequest& req, HttpResponse& resp) const
   }
   catch(HttpException &e) {
     resp = e.response();
-#ifdef RECURSOR
-    // An HttpException does not initialize d_slog
-    if (!resp.d_slog) {
-      resp.setSLog(log);
+    if (g_slogStructured) {
+      // An HttpException does not initialize d_slog
+      if (!resp.d_slog) {
+        resp.setSLog(log);
+      }
     }
-#endif
     // TODO rm this logline?
     SLOG(g_log<<Logger::Debug<<req.logprefix<<"Error result for \"" << req.url.path << "\": " << resp.status << endl,
          d_slog->error(Logr::Debug, resp.status, "Error result", "urlpath", Logging::Loggable(req.url.path)));
@@ -361,7 +362,6 @@ void WebServer::handleRequest(HttpRequest& req, HttpResponse& resp) const
   }
 }
 
-#ifdef RECURSOR
 // Helper to log key-value maps used by YaHTTP
 template<>
 std::string Logging::IterLoggable<YaHTTP::strstr_map_t::const_iterator>::to_string() const
@@ -379,13 +379,10 @@ std::string Logging::IterLoggable<YaHTTP::strstr_map_t::const_iterator>::to_stri
   }
   return oss.str();
 }
-#endif
 
 void WebServer::logRequest(const HttpRequest& req, [[maybe_unused]] const ComboAddress& remote) const {
   if (d_loglevel >= WebServer::LogLevel::Detailed) {
-#ifdef RECURSOR
     if (!g_slogStructured) {
-#endif
       const auto& logprefix = req.logprefix;
       g_log<<Logger::Notice<<logprefix<<"Request details:"<<endl;
 
@@ -422,7 +419,6 @@ void WebServer::logRequest(const HttpRequest& req, [[maybe_unused]] const ComboA
         g_log<<Logger::Notice<<logprefix<<" Full body: "<<endl;
         g_log<<Logger::Notice<<logprefix<<"  "<<req.body<<endl;
       }
-#ifdef RECURSOR
     }
     else {
       req.d_slog->info(Logr::Info, "Request details", "getParams", Logging::IterLoggable(req.getvars.cbegin(), req.getvars.cend()),
@@ -430,15 +426,12 @@ void WebServer::logRequest(const HttpRequest& req, [[maybe_unused]] const ComboA
                        "body", Logging::Loggable(req.body),
                        "address", Logging::Loggable(remote));
     }
-#endif
   }
 }
 
 void WebServer::logResponse(const HttpResponse& resp, const ComboAddress& /* remote */, const string& logprefix) const {
   if (d_loglevel >= WebServer::LogLevel::Detailed) {
-#ifdef RECURSOR
     if (!g_slogStructured) {
-#endif
       g_log<<Logger::Notice<<logprefix<<"Response details:"<<endl;
       bool first = true;
       for (const auto& h : resp.headers) {
@@ -454,13 +447,11 @@ void WebServer::logResponse(const HttpResponse& resp, const ComboAddress& /* rem
         g_log<<Logger::Notice<<logprefix<<" Full body: "<<endl;
         g_log<<Logger::Notice<<logprefix<<"  "<<resp.body<<endl;
       }
-#ifdef RECURSOR
     }
     else {
       resp.d_slog->info(Logr::Info, "Response details", "headers", Logging::IterLoggable(resp.headers.cbegin(), resp.headers.cend()),
                         "body", Logging::Loggable(resp.body));
     }
-#endif
   }
 }
 
@@ -518,11 +509,11 @@ void WebServer::serveConnection(const std::shared_ptr<Socket>& client) const {
   HttpRequest req(logprefix);
 
   HttpResponse resp;
-#ifdef RECURSOR
-  auto log = d_slog->withValues("uniqueid",  Logging::Loggable(to_string(unique)));
-  req.setSLog(log);
-  resp.setSLog(log);
-#endif
+  if (g_slogStructured) {
+    auto log = d_slog->withValues("uniqueid",  Logging::Loggable(to_string(unique)));
+    req.setSLog(log);
+    resp.setSLog(log);
+  }
   resp.max_response_size=d_maxbodysize;
   ComboAddress remote;
   string reply;

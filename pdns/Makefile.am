@@ -242,7 +242,8 @@ pdns_server_SOURCES = \
 	json.cc json.hh \
 	lock.hh \
 	logger.cc logger.hh \
-	logging.hh \
+	logging.cc logging.hh \
+	logr.hh \
 	lua-auth4.cc lua-auth4.hh \
 	lua-base4.cc lua-base4.hh \
 	misc.cc misc.hh \
@@ -371,7 +372,8 @@ pdnsutil_SOURCES = \
 	ipcipher.cc ipcipher.hh \
 	iputils.cc iputils.hh \
 	json.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	lua-auth4.cc lua-auth4.hh \
 	lua-base4.cc lua-base4.hh \
 	misc.cc misc.hh \
@@ -452,7 +454,8 @@ zone2sql_SOURCES = \
 	dnsrecords.cc \
 	dnswriter.cc \
 	json.cc json.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -480,7 +483,8 @@ zone2json_SOURCES = \
 	dnsparser.cc \
 	dnsrecords.cc \
 	dnswriter.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -516,7 +520,8 @@ zone2ldap_SOURCES = \
 	dnsparser.cc \
 	dnsrecords.cc \
 	dnswriter.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -549,7 +554,8 @@ sdig_SOURCES = \
 	ednsextendederror.cc ednsextendederror.hh \
 	ednssubnet.cc iputils.cc \
 	libssl.cc libssl.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	protozero-trace.hh \
@@ -605,7 +611,8 @@ calidns_SOURCES = \
 	ednsoptions.cc ednsoptions.hh \
 	ednssubnet.cc ednssubnet.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -626,7 +633,8 @@ dumresp_SOURCES = \
 	dnsname.cc dnsname.hh \
 	dumresp.cc \
 	iputils.cc iputils.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	qtype.cc \
 	statbag.cc \
@@ -637,7 +645,8 @@ dumresp_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 kvresp_SOURCES = \
 	dnslabeltext.cc dnsname.cc dnsname.hh \
 	kvresp.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	qtype.cc \
 	statbag.cc \
@@ -655,7 +664,8 @@ stubquery_SOURCES = \
 	ednsoptions.cc ednsoptions.hh \
 	ednssubnet.cc ednssubnet.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -682,7 +692,8 @@ saxfr_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	gss_context.cc gss_context.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -737,7 +748,8 @@ ixfrdist_SOURCES = \
 	ixfrdist-web.hh ixfrdist-web.cc \
 	ixfrdist.cc \
 	ixfrutils.cc ixfrutils.hh \
-	logger.cc logger.hh\
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	mplexer.hh \
 	nsecrecords.cc \
@@ -806,7 +818,8 @@ ixplore_SOURCES = \
 	ixfr.cc ixfr.hh \
 	ixfrutils.cc ixfrutils.hh \
 	ixplore.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -841,7 +854,8 @@ dnstcpbench_SOURCES = \
 	dnstcpbench.cc \
 	dnswriter.cc dnswriter.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -873,7 +887,8 @@ nsec3dig_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	gss_context.cc gss_context.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsec3dig.cc \
 	nsecrecords.cc \
@@ -914,7 +929,8 @@ tsig_tests_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	gss_context.cc gss_context.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -955,7 +971,8 @@ speedtest_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	gss_context.cc gss_context.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -981,7 +998,8 @@ dnswasher_SOURCES = \
 	dnswasher.cc \
 	dnswriter.hh \
 	ipcipher.cc ipcipher.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	qtype.cc \
 	statbag.cc \
@@ -1002,7 +1020,8 @@ dnsbulktest_SOURCES = \
 	dnsrecords.cc \
 	dnswriter.cc \
 	iputils.cc iputils.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1031,7 +1050,8 @@ comfun_SOURCES = \
 	dnsparser.cc \
 	dnsrecords.cc \
 	dnswriter.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1063,7 +1083,8 @@ dnsscan_SOURCES = \
 	dnsrecords.cc \
 	dnsscan.cc \
 	dnswriter.cc dnswriter.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1094,7 +1115,8 @@ dnsreplay_SOURCES = \
 	ednsoptions.cc ednsoptions.hh \
 	ednssubnet.cc ednssubnet.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1122,7 +1144,8 @@ nproxy_SOURCES = \
 	dnsparser.cc dnsparser.hh \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	mplexer.hh \
 	nproxy.cc \
@@ -1154,7 +1177,8 @@ pdns_notify_SOURCES = \
 	dnsparser.cc dnsparser.hh \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	notify.cc \
 	nsecrecords.cc \
@@ -1193,7 +1217,8 @@ dnsscope_SOURCES = \
 	dnsscope.cc \
 	dnswriter.cc dnswriter.hh \
 	histog.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1224,7 +1249,8 @@ dnsgram_SOURCES = \
 	dnspcap.cc dnspcap.hh \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1252,7 +1278,8 @@ dnsdemog_SOURCES = \
 	dnspcap.cc dnspcap.hh \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1283,7 +1310,8 @@ dnspcap2calidns_SOURCES = \
 	ednsoptions.cc ednsoptions.hh \
 	ednssubnet.cc ednssubnet.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1315,7 +1343,8 @@ dnspcap2protobuf_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	gettime.cc gettime.hh \
 	iputils.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	nsecrecords.cc \
 	protozero.cc protozero.hh \
@@ -1374,7 +1403,8 @@ testrunner_SOURCES = \
 	ipcipher.cc ipcipher.hh \
 	iputils.cc \
 	ixfr.cc ixfr.hh \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	lua-auth4.hh lua-auth4.cc \
 	lua-base4.hh lua-base4.cc \
 	misc.cc \
@@ -1511,7 +1541,8 @@ pdns_control_SOURCES = \
 	dnsname.cc \
 	dynloader.cc \
 	dynmessenger.cc \
-	logger.cc \
+	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc \
 	qtype.cc \
 	statbag.cc \
@@ -1575,6 +1606,7 @@ fuzz_target_moadnsparser_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	fuzz_moadnsparser.cc \
 	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc  \
 	qtype.cc qtype.hh \
@@ -1632,6 +1664,7 @@ fuzz_target_zoneparsertng_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	fuzz_zoneparsertng.cc \
 	logger.cc logger.hh \
+	logging.cc logging.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc  \
 	qtype.cc qtype.hh \

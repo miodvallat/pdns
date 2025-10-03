@@ -242,6 +242,7 @@ pdns_server_SOURCES = \
 	lock.hh \
 	logger.cc logger.hh \
 	logging.cc logging.hh \
+	logr.hh \
 	lua-auth4.cc lua-auth4.hh \
 	lua-base4.cc lua-base4.hh \
 	misc.cc misc.hh \

@@ -24,6 +24,7 @@
 #include <map>
 #include "ssql.hh"
 #include "pdns/arguments.hh"
+#include "pdns/logr.hh"
 
 #include "pdns/namespaces.hh"
 
@@ -455,4 +456,6 @@ protected:
   bool d_dnssecQueries;
   bool d_inTransaction{false};
   bool d_upgradeContent{false};
+
+  std::shared_ptr<Logr::Logger> d_slog;
 };

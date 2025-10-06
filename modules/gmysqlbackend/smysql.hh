@@ -24,12 +24,14 @@
 
 #include <mysql.h>
 #include "pdns/backends/gsql/ssql.hh"
+#include "pdns/logging.hh"
 #include "pdns/utility.hh"
 
 class SMySQL : public SSql
 {
 public:
-  SMySQL(string database, string host = "", uint16_t port = 0,
+  SMySQL(std::shared_ptr<Logr::Logger> log,
+         string database, string host = "", uint16_t port = 0,
          string msocket = "", string user = "",
          string password = "", string group = "",
          bool setIsolation = false, unsigned int timeout = 10,
@@ -64,4 +66,5 @@ private:
   uint16_t d_port;
   bool d_setIsolation;
   bool d_threadCleanup;
+  std::shared_ptr<Logr::Logger> d_slog;
 };

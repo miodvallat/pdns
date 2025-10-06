@@ -34,6 +34,7 @@
 #include "pdns/dns.hh"
 #include "pdns/dnsbackend.hh"
 #include "pdns/lock.hh"
+#include "pdns/logr.hh"
 
 class GeoIPInterface;
 
@@ -86,6 +87,8 @@ public:
 
 private:
   static ReadWriteLock s_state_lock;
+
+  std::shared_ptr<Logr::Logger> d_slog;
 
   void initialize();
   string format2str(string format, const Netmask& addr, GeoIPNetmask& gl, const GeoIPDomain& dom);

@@ -38,6 +38,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "pdns/lock.hh"
+#include "pdns/logr.hh"
 #include "pdns/misc.hh"
 #include "pdns/dnsbackend.hh"
 #include "pdns/namespaces.hh"
@@ -257,10 +258,12 @@ private:
     bool get(DNSResourceRecord&);
     void reset();
 
-    handle();
+    handle() {}
 
     handle(const handle&) = delete;
     handle& operator=(const handle&) = delete; // don't go copying this
+
+    void setSLog(std::shared_ptr<Logr::Logger> log) { d_slog = log; }
 
     shared_ptr<const recordstorage_t> d_records;
     recordstorage_t::index<UnorderedNameTag>::type::const_iterator d_iter, d_end_iter;
@@ -274,6 +277,7 @@ private:
     QType qtype;
     bool d_list{false};
     bool mustlog{false};
+    std::shared_ptr<Logr::Logger> d_slog;
 
   private:
     bool get_normal(DNSResourceRecord&);
@@ -297,9 +301,11 @@ private:
   unique_ptr<SSqlStatement> d_deleteTSIGKeyQuery_stmt;
   unique_ptr<SSqlStatement> d_getTSIGKeysQuery_stmt;
 
+  std::shared_ptr<Logr::Logger> d_slog;
+  string d_logprefix;
+
   ZoneName d_transaction_qname;
   string d_transaction_tmpname;
-  string d_logprefix;
   set<string> alsoNotify; //!< this is used to store the also-notify list of interested peers.
   std::unique_ptr<ofstream> d_of;
   handle d_handle;
@@ -314,7 +320,7 @@ private:
 
   void queueReloadAndStore(domainid_t id);
   static bool findBeforeAndAfterUnhashed(std::shared_ptr<const recordstorage_t>& records, const DNSName& qname, DNSName& unhashed, DNSName& before, DNSName& after);
-  static void insertRecord(std::shared_ptr<recordstorage_t>& records, const ZoneName& zoneName, const DNSName& qname, const QType& qtype, const string& content, int ttl, const std::string& hashed = string(), const bool* auth = nullptr);
+  void insertRecord(std::shared_ptr<recordstorage_t>& records, const ZoneName& zoneName, const DNSName& qname, const QType& qtype, const string& content, int ttl, const std::string& hashed = string(), const bool* auth = nullptr);
   void reload() override;
   static string DLDomStatusHandler(const vector<string>& parts, Utility::pid_t ppid);
   static string DLDomExtendedStatusHandler(const vector<string>& parts, Utility::pid_t ppid);
@@ -322,6 +328,6 @@ private:
   static string DLReloadNowHandler(const vector<string>& parts, Utility::pid_t ppid);
   static string DLAddDomainHandler(const vector<string>& parts, Utility::pid_t ppid);
   static void fixupOrderAndAuth(std::shared_ptr<recordstorage_t>& records, const ZoneName& zoneName, bool nsec3zone, const NSEC3PARAMRecordContent& ns3pr);
-  static void doEmptyNonTerminals(std::shared_ptr<recordstorage_t>& records, const ZoneName& zoneName, bool nsec3zone, const NSEC3PARAMRecordContent& ns3pr);
+  void doEmptyNonTerminals(std::shared_ptr<recordstorage_t>& records, const ZoneName& zoneName, bool nsec3zone, const NSEC3PARAMRecordContent& ns3pr);
   void loadConfig(string* status = nullptr);
 };

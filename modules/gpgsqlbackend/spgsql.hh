@@ -22,12 +22,13 @@
 #pragma once
 #include "pdns/namespaces.hh"
 #include "pdns/backends/gsql/ssql.hh"
+#include "pdns/logging.hh"
 
 #include <libpq-fe.h>
 class SPgSQL : public SSql
 {
 public:
-  SPgSQL(const string& database, const string& host = "", const string& port = "",
+  SPgSQL(std::shared_ptr<Logr::Logger> log, const string& database, const string& host = "", const string& port = "",
          const string& user = "", const string& password = "",
          const string& extra_connection_parameters = "", const bool use_prepared = true);
 
@@ -54,6 +55,7 @@ private:
   string d_connectstr;
   string d_connectlogstr;
   static bool s_dolog;
+  std::shared_ptr<Logr::Logger> d_slog;
   bool d_in_trx;
   bool d_use_prepared;
   unsigned int d_nstatements;

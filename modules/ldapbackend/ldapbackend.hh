@@ -51,6 +51,7 @@ class LdapBackend : public DNSBackend
   string d_myname;
 
   bool d_qlog;
+  std::shared_ptr<Logr::Logger> d_slog;
   uint32_t d_default_ttl;
   int d_reconnect_attempts;
 

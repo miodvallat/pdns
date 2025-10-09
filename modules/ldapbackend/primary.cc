@@ -39,18 +39,21 @@ void LdapBackend::getUpdatedPrimaries(vector<DomainInfo>& domains, std::unordere
     search = d_pldap->search(getArg("basedn"), LDAP_SCOPE_SUBTREE, filter, attronly);
   }
   catch (LDAPTimeout& lt) {
-    g_log << Logger::Warning << d_myname << " Unable to search LDAP directory: " << lt.what() << endl;
+    SLOG(g_log << Logger::Warning << d_myname << " Unable to search LDAP directory: " << lt.what() << endl,
+         d_slog->info(Logr::Warning, "unable to search LDAP directory", "error", Logging::Loggable(lt.what())));
     throw DBException("LDAP server timeout");
   }
   catch (LDAPNoConnection& lnc) {
-    g_log << Logger::Warning << d_myname << " Connection to LDAP lost, trying to reconnect" << endl;
+    SLOG(g_log << Logger::Warning << d_myname << " Connection to LDAP lost, trying to reconnect" << endl,
+         d_slog->info(Logr::Warning, "LDAP connection lost, trying to reconnect", "error", Logging::Loggable(lnc.what())));
     if (reconnect()) {
       return this->getUpdatedPrimaries(domains, catalogs, catalogHashes);
     }
     throw PDNSException("Failed to reconnect to LDAP server");
   }
   catch (LDAPException& le) {
-    g_log << Logger::Error << d_myname << " Unable to search LDAP directory: " << le.what() << endl;
+    SLOG(g_log << Logger::Error << d_myname << " Unable to search LDAP directory: " << le.what() << endl,
+         d_slog->info(Logr::Warning, "unable to search LDAP directory", "error", Logging::Loggable(le.what())));
     throw PDNSException("LDAP server unreachable"); // try to reconnect to another server
   }
   catch (std::exception& e) {
@@ -87,11 +90,13 @@ void LdapBackend::setNotified(domainid_t id, uint32_t serial)
     search->getAll(results, true);
   }
   catch (LDAPTimeout& lt) {
-    g_log << Logger::Warning << d_myname << " Unable to search LDAP directory: " << lt.what() << endl;
+    SLOG(g_log << Logger::Warning << d_myname << " Unable to search LDAP directory: " << lt.what() << endl,
+         d_slog->info(Logr::Warning, "unable to search LDAP directory", "error", Logging::Loggable(lt.what())));
     throw DBException("LDAP server timeout");
   }
   catch (LDAPNoConnection& lnc) {
-    g_log << Logger::Warning << d_myname << " Connection to LDAP lost, trying to reconnect" << endl;
+    SLOG(g_log << Logger::Warning << d_myname << " Connection to LDAP lost, trying to reconnect" << endl,
+         d_slog->info(Logr::Warning, "LDAP connection lost, trying to reconnect", "error", Logging::Loggable(lnc.what())));
     if (reconnect()) {
       this->setNotified(id, serial);
       return;
@@ -99,7 +104,8 @@ void LdapBackend::setNotified(domainid_t id, uint32_t serial)
     throw PDNSException("Failed to reconnect to LDAP server");
   }
   catch (LDAPException& le) {
-    g_log << Logger::Error << d_myname << " Unable to search LDAP directory: " << le.what() << endl;
+    SLOG(g_log << Logger::Error << d_myname << " Unable to search LDAP directory: " << le.what() << endl,
+         d_slog->info(Logr::Warning, "unable to search LDAP directory", "error", Logging::Loggable(le.what())));
     throw PDNSException("LDAP server unreachable"); // try to reconnect to another server
   }
   catch (std::exception& e) {
@@ -129,7 +135,8 @@ void LdapBackend::setNotified(domainid_t id, uint32_t serial)
     d_pldap->modify(dn, mods);
   }
   catch (LDAPNoConnection& lnc) {
-    g_log << Logger::Warning << d_myname << " Connection to LDAP lost, trying to reconnect" << endl;
+    SLOG(g_log << Logger::Warning << d_myname << " Connection to LDAP lost, trying to reconnect" << endl,
+         d_slog->info(Logr::Warning, "LDAP connection lost, trying to reconnect", "error", Logging::Loggable(lnc.what())));
     if (reconnect()) {
       this->setNotified(id, serial);
       return;
@@ -137,7 +144,8 @@ void LdapBackend::setNotified(domainid_t id, uint32_t serial)
     throw PDNSException("Failed to reconnect to LDAP server");
   }
   catch (LDAPException& le) {
-    g_log << Logger::Error << d_myname << " Unable to search LDAP directory: " << le.what() << endl;
+    SLOG(g_log << Logger::Error << d_myname << " Unable to search LDAP directory: " << le.what() << endl,
+         d_slog->info(Logr::Warning, "unable to search LDAP directory", "error", Logging::Loggable(le.what())));
     throw PDNSException("LDAP server unreachable"); // try to reconnect to another server
   }
   catch (std::exception& e) {

@@ -21,6 +21,7 @@
  */
 #pragma once
 #include "pdns/dnsbackend.hh"
+#include "pdns/logr.hh"
 #include "pdns/logger.hh"
 #include "pdns/iputils.hh"
 #include "pdns/dnspacket.hh"
@@ -113,6 +114,7 @@ private:
   bool d_locations;
   bool d_ignorebogus;
   string d_suffix;
+  std::shared_ptr<Logr::Logger> d_slog;
 
   // Statics
   static LockGuarded<TDI_suffix_t> s_domainInfo;

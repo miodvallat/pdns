@@ -22,6 +22,7 @@
 
 #pragma once
 #include "pdns/dnsbackend.hh"
+#include "pdns/logr.hh"
 #include "ext/lmdb-safe/lmdb-typed.hh"
 
 template <class T, typename std::enable_if<std::is_same<T, DNSName>::value, T>::type* = nullptr>
@@ -425,4 +426,5 @@ private:
   bool d_write_notification_update;
   DTime d_dtime; // used only for logging
   uint64_t d_mapsize;
+  std::shared_ptr<Logr::Logger> d_slog;
 };

@@ -24,6 +24,7 @@
 #include "pdns/arguments.hh"
 
 #include "pdns/dnsbackend.hh"
+#include "pdns/logr.hh"
 #include "pdns/lua-auth4.hh"
 
 class Lua2BackendAPIv2 : public DNSBackend, AuthLua4
@@ -67,6 +68,9 @@ private:
 public:
   Lua2BackendAPIv2(const string& suffix)
   {
+    if (g_slogStructured) {
+      d_slog = g_slog->withName("lua2" + suffix);
+    }
     d_include_path = ::arg()["lua-global-include-dir"];
     setArgPrefix("lua2" + suffix);
     d_debug_log = mustDo("query-logging");
@@ -446,6 +450,7 @@ private:
   std::list<DNSResourceRecord> d_result;
   bool d_debug_log{false};
   bool d_dnssec{false};
+  std::shared_ptr<Logr::Logger> d_slog;
 
   lookup_call_t f_lookup;
   list_call_t f_list;

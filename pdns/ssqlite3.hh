@@ -21,7 +21,9 @@
  */
 #pragma once
 #include <sqlite3.h>
+
 #include "pdns/backends/gsql/ssql.hh"
+#include "pdns/logging.hh"
 
 class SSQLite3 : public SSql
 {
@@ -30,6 +32,7 @@ private:
   sqlite3* m_pDB{nullptr};
 
   bool m_dolog;
+  std::shared_ptr<Logr::Logger> m_slog;
   bool m_in_transaction;
   static int busyHandler(void*, int);
 
@@ -37,7 +40,7 @@ private:
 
 public:
   //! Constructor.
-  SSQLite3(const std::string& database, const std::string& journalmode, bool creat = false);
+  SSQLite3(std::shared_ptr<Logr::Logger> log, const std::string& database, const std::string& journalmode, bool creat = false);
 
   //! Destructor.
   ~SSQLite3() override;

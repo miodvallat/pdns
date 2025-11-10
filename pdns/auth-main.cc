@@ -886,7 +886,7 @@ static void mainthread()
   }
 
   try {
-    doSecPoll(true);
+    doSecPoll(slog, true);
   }
   catch (...) {
   }
@@ -1016,7 +1016,7 @@ static void mainthread()
     if (secpollSince >= secpollInterval) {
       secpollSince = 0;
       try {
-        doSecPoll(false);
+        doSecPoll(slog, false);
       }
       catch (...) {
       }

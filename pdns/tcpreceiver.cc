@@ -363,7 +363,7 @@ void TCPNameserver::doConnection(int fd, std::shared_ptr<Logr::Logger> slog)
       else
         S.inc("tcp4-queries");
 
-      packet=make_unique<DNSPacket>(true);
+      packet=make_unique<DNSPacket>(slog, true);
       packet->setRemote(&remote);
       packet->d_tcp=true;
       if (inner_remote) {
@@ -392,7 +392,7 @@ void TCPNameserver::doConnection(int fd, std::shared_ptr<Logr::Logger> slog)
       }
 
       std::unique_ptr<DNSPacket> reply;
-      auto cached = make_unique<DNSPacket>(false);
+      auto cached = make_unique<DNSPacket>(slog, false);
       if(logDNSQueries)  {
         if (!g_slogStructured) {
           g_log << Logger::Notice<<"TCP Remote "<< packet->getRemoteString() <<" wants '" << packet->qdomain<<"|"<<packet->qtype.toString() <<

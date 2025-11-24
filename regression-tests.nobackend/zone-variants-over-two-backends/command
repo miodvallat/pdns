@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -e
+if [ "${PDNS_DEBUG}" = "YES" ]; then
+  set -x
+fi
+
+local_address="127.0.0.1"
+port=5600
+
+# Configuration files for pdnsutil
+
+cat > pdns-gsqlite3.conf << __EOF__
+launch=gsqlite3
+gsqlite3-database=pdns.sqlite3
+module-dir=../regression-tests/modules
+__EOF__
+
+cat > pdns-lmdb.conf << __EOF__
+launch=lmdb
+views
+random-ids=no
+module-dir=../regression-tests/modules
+__EOF__
+
+# Create a zone in sqlite3 backend
+
+rm -f pdns.sqlite3
+sqlite3 pdns.sqlite3 < ../modules/gsqlite3backend/schema.sqlite3.sql
+echo ANALYZE\; | sqlite3 pdns.sqlite3
+
+$PDNSUTIL --config-dir=. --config-name=gsqlite3 \
+  zone create bug.less
+$PDNSUTIL --config-dir=. --config-name=gsqlite3 \
+  rrset add bug.less test.bug.less TXT "this is the variantless zone"
+
+# Create a variant of this zone in lmdb backend
+
+rm -f pdns.lmdb*
+
+$PDNSUTIL --config-dir=. --config-name=lmdb \
+  zone create bug.less..variant
+$PDNSUTIL --config-dir=. --config-name=lmdb \
+  rrset add bug.less..variant test.bug.less TXT "this is the variant zone"
+
+# Setup a view so that we should hit the variant
+
+$PDNSUTIL --config-dir=. --config-name=lmdb \
+  network set 127.0.0.1/32 myview
+$PDNSUTIL --config-dir=. --config-name=lmdb \
+  view add-zone myview bug.less..variant
+
+# Query in gsqlite3,lmdb order
+
+rm -f pdns*.pid
+$PDNS --no-config --launch=gsqlite3,lmdb --views \
+  --module-dir=../regression-tests/modules \
+  --gsqlite3-database=pdns.sqlite3 \
+  --daemon=no --socket-dir=. \
+  --local-address=${local_address} --local-port=${port} &
+sleep 2
+
+$SDIG 127.0.0.1 $port test.bug.less TXT
+
+kill $(cat pdns*.pid)
+rm -f pdns*.pid
+
+# Query in lmdb,gsqlite3 order
+
+rm -f pdns*.pid
+$PDNS --no-config --launch=lmdb,gsqlite3 --views \
+  --module-dir=../regression-tests/modules \
+  --gsqlite3-database=pdns.sqlite3 \
+  --daemon=no --socket-dir=. \
+  --local-address=${local_address} --local-port=${port} &
+sleep 2
+
+$SDIG 127.0.0.1 $port test.bug.less TXT
+
+kill $(cat pdns*.pid)
+rm -f pdns*.pid
+
+rm -f pdns.sqlite3 pdns-gsqlite3.conf pdns-lmdb.conf pdns.lmdb*

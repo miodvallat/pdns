@@ -1,0 +1,3 @@
+Verify that a views setup with one zone variant in lmdb and the variantless
+zone in a non-lmdb backend are handled correctly, regardless of the order
+in which backends are instantiated.

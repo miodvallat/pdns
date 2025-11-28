@@ -63,6 +63,7 @@ public:
   vector<std::unique_ptr<DNSBackend>> backends;
 
   void lookup(const QType& qtype, const DNSName& qname, domainid_t zoneId, DNSPacket* pkt_p = nullptr);
+  void lookup(const QType& qtype, const ZoneName& qname, domainid_t zoneId, DNSPacket* pkt_p = nullptr);
   /** Read a single record from a lookup(...) result. */
   bool get(DNSZoneRecord& resourceRecord);
   /** Close state created by lookup(...). */
@@ -140,7 +141,7 @@ private:
     void selectNextBackend();
 
     void setupQuestion(Question& question) const;
-    void lookup(const QType& qtype, const DNSName& qname, domainid_t zoneId, DNSPacket* pkt_p);
+    void lookup(const QType& qtype, const ZoneName& qname, domainid_t zoneId, DNSPacket* pkt_p);
     bool get(DNSZoneRecord& record);
     void lookupEnd() const;
 
@@ -156,7 +157,9 @@ private:
 
     //! DNSPacket who asked this question
     DNSPacket* d_pkt_p{nullptr};
+
     DNSName d_qname;
+    std::string d_variant;
 
     QType d_qtype;
     domainid_t d_zoneId{UnknownDomainID};

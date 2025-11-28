@@ -409,7 +409,7 @@ bool UeberBackend::inTransaction()
 bool UeberBackend::fillSOAFromZoneRecord(ZoneName& shorter, const domainid_t zoneId, SOAData* const soaData)
 {
   // Zone exists in zone cache, directly look up SOA.
-  lookup(QType(QType::SOA), shorter.operator const DNSName&(), zoneId, nullptr);
+  lookup(QType(QType::SOA), shorter, zoneId, nullptr);
 
   DNSZoneRecord zoneRecord;
   if (!get(zoneRecord)) {
@@ -795,6 +795,12 @@ UeberBackend::~UeberBackend()
 // this handle is more magic than most
 void UeberBackend::lookup(const QType& qtype, const DNSName& qname, domainid_t zoneId, DNSPacket* pkt_p)
 {
+  // FIXME what variant to use here?
+  lookup(qtype, ZoneName(qname), zoneId, pkt_p);
+}
+
+void UeberBackend::lookup(const QType& qtype, const ZoneName& qname, domainid_t zoneId, DNSPacket* pkt_p)
+{
   if (d_stale) {
     g_log << Logger::Error << "Stale ueberbackend received question, signalling that we want to be recycled" << endl;
     throw PDNSException("We are stale, please recycle");
@@ -1060,13 +1066,16 @@ void UeberBackend::flush()
   }
 }
 
-void UeberBackend::handle::lookup(const QType& qtype, const DNSName& qname, domainid_t zoneId, DNSPacket* pkt_p)
+void UeberBackend::handle::lookup(const QType& qtype, const ZoneName& qname, domainid_t zoneId, DNSPacket* pkt_p)
 {
   d_backendIndex = 0;
   d_qtype = s_doANYLookupsOnly ? QType::ANY : qtype;
-  d_qname = qname;
+  d_qname = qname.operator const DNSName&();
   d_zoneId = zoneId;
   d_pkt_p = pkt_p;
+  if (g_views) {
+    d_variant = qname.getVariant();
+  }
 }
 
 void UeberBackend::handle::setupQuestion(UeberBackend::Question& question) const
@@ -1081,14 +1090,31 @@ void UeberBackend::handle::setupQuestion(UeberBackend::Question& question) const
 // Invokes lookup on behalf of the newly picked backend if successful.
 void UeberBackend::handle::selectNextBackend()
 {
-  if (d_backendIndex < d_parent->backends.size()) {
+  while (d_backendIndex < d_parent->backends.size()) {
     d_hinterBackend = d_parent->backends[d_backendIndex++].get();
+    // The consistent-backends setting (which might not even be enabled)
+    // does not apply to zone variants. A zone with variant may be in a
+    // different backend than the variantless zone, therefore, when
+    // switching backends, we need to make sure that the given zone id at
+    // that backend truly serves the expected variant.
+    if (g_views) {
+      // We can't invoke getDomainInfo with the given d_zoneId without
+      // needing a chopOff() loop, as d_qname is unlikely to match the
+      // domain name; getDomainById() is a better choice.
+      DomainInfo info;
+      if (!d_hinterBackend->getDomainById(d_zoneId, info)) {
+        continue;
+      }
+      if (d_variant != info.zone.getVariant()) {
+        continue;
+      }
+    }
     d_hinterBackend->lookup(d_qtype, d_qname, d_zoneId, d_pkt_p);
     ++(*s_backendQueries);
+    return;
   }
-  else {
-    d_hinterBackend = nullptr;
-  }
+
+  d_hinterBackend = nullptr;
 }
 
 bool UeberBackend::handle::get(DNSZoneRecord& record)
@@ -1105,6 +1131,7 @@ bool UeberBackend::handle::get(DNSZoneRecord& record)
 
   if (d_hinterBackend == nullptr) {
     DLOG(g_log << "UeberBackend reached end of backends" << endl);
+    // FIXME should we reset d_variant here?
     return false;
   }
 
@@ -1118,4 +1145,5 @@ void UeberBackend::handle::lookupEnd() const
   if (d_hinterBackend != nullptr) {
     d_hinterBackend->lookupEnd();
   }
+  // FIXME should we reset d_variant here?
 }

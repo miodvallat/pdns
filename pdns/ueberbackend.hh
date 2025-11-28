@@ -193,3 +193,5 @@ private:
   bool fillSOAFromZoneRecord(ZoneName& shorter, domainid_t zoneId, SOAData* soaData);
   CacheResult fillSOAFromCache(SOAData* soaData, ZoneName& shorter);
 };
+
+extern bool g_views;

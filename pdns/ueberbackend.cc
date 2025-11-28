@@ -41,6 +41,8 @@
 
 extern StatBag S;
 
+bool g_views{false};
+
 // initially we are blocked
 bool UeberBackend::d_go = false;
 bool UeberBackend::s_doANYLookupsOnly = false;

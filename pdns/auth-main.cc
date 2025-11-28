@@ -116,7 +116,6 @@ time_t g_luaConsistentHashesCleanupInterval{3600};
 #ifdef ENABLE_GSS_TSIG
 bool g_doGssTSIG;
 #endif
-bool g_views;
 typedef Distributor<DNSPacket, DNSPacket, PacketHandler> DNSDistributor;
 
 ArgvMap theArg;

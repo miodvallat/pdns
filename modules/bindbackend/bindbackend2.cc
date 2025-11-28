@@ -457,7 +457,7 @@ void Bind2Backend::getAllDomains(vector<DomainInfo>* domains, bool getSerial, bo
       di.primaries = i.d_primaries;
       di.backend = this;
       domains->push_back(std::move(di));
-    };
+    }
   }
 
   if (getSerial) {
@@ -474,6 +474,25 @@ void Bind2Backend::getAllDomains(vector<DomainInfo>* domains, bool getSerial, bo
       di.serial = soadata.serial;
     }
   }
+}
+
+bool Bind2Backend::getDomainById(domainid_t domainId, DomainInfo& info)
+{
+  auto state = s_state.read_lock();
+
+  for (const auto& i : *state) {
+    if (i.d_id == domainId) {
+      info.id = i.d_id;
+      info.zone = i.d_name;
+      info.last_check = i.d_lastcheck;
+      info.kind = i.d_kind;
+      info.primaries = i.d_primaries;
+      info.backend = this;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 void Bind2Backend::getUnfreshSecondaryInfos(vector<DomainInfo>* unfreshDomains)

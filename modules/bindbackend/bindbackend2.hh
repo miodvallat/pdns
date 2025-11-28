@@ -193,6 +193,7 @@ public:
   bool get(DNSResourceRecord&) override;
   void lookupEnd() override;
   void getAllDomains(vector<DomainInfo>* domains, bool getSerial, bool include_disabled = false) override;
+  bool getDomainById(domainid_t domainId, DomainInfo& info) override;
 
   static std::mutex s_startup_lock;
 

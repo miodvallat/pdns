@@ -2301,6 +2301,49 @@ void LMDBBackend::getAllDomains(vector<DomainInfo>* domains, bool /* doSerial */
   });
 }
 
+bool LMDBBackend::getDomainById(domainid_t domainId, DomainInfo& info)
+{
+  auto txn = d_tdomains->getROTransaction();
+  if (d_handle_dups) {
+    set<ZoneName> dups;
+
+    for (auto iter = txn.begin(); iter != txn.end(); ++iter) {
+      DomainInfo di = *iter;
+      di.id = iter.getID();
+      if (di.id != domainId) {
+        continue;
+      }
+      di.backend = this;
+      dups.insert(di.zone);
+    }
+
+    for (const auto& zone : dups) {
+      DomainInfo tmpInfo;
+      // this get grabs the oldest item if there are duplicates
+      if (!findDomain(zone, tmpInfo)) {
+        continue;
+      }
+      info = std::move(tmpInfo);
+      consolidateDomainInfo(info);
+      return true;
+    }
+  }
+  else {
+    for (auto iter = txn.begin(); iter != txn.end(); ++iter) {
+      DomainInfo di = *iter;
+      di.id = iter.getID();
+      if (di.id != domainId) {
+        continue;
+      }
+      di.backend = this;
+      info = std::move(di);
+      consolidateDomainInfo(info);
+      return true;
+    }
+  }
+  return false;
+}
+
 void LMDBBackend::getUnfreshSecondaryInfos(vector<DomainInfo>* domains)
 {
   uint32_t serial;

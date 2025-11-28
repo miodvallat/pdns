@@ -372,6 +372,24 @@ public:
     }
   }
 
+  bool getDomainById(domainid_t domainId, DomainInfo& info) override
+  {
+    if (f_get_all_domains == nullptr) {
+      return false;
+    }
+
+    for (const auto& row : f_get_all_domains()) {
+      DomainInfo di;
+      di.zone = ZoneName(row.first);
+      parseDomainInfo(row.second, di);
+      if (di.id == domainId) {
+        info = std::move(di);
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool getAllDomainMetadata(const ZoneName& name, std::map<std::string, std::vector<std::string>>& meta) override
   {
     if (f_get_all_domain_metadata == nullptr) {

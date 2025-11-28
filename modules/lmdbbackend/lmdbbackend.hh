@@ -98,6 +98,7 @@ public:
   bool networkList(vector<pair<Netmask, string>>& networks) override;
 
   void getAllDomains(vector<DomainInfo>* domains, bool doSerial, bool include_disabled) override;
+  bool getDomainById(domainid_t DomainId, DomainInfo& info) override;
   void lookup(const QType& type, const DNSName& qdomain, domainid_t zoneId, DNSPacket* p = nullptr) override { lookupInternal(type, qdomain, zoneId, p, false); }
   void APILookup(const QType& type, const DNSName& qdomain, domainid_t zoneId, bool include_disabled = false) override { lookupInternal(type, qdomain, zoneId, nullptr, include_disabled); }
   bool get(DNSResourceRecord& rr) override;

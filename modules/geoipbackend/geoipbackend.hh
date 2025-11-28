@@ -72,6 +72,7 @@ public:
   void rediscover(string* status = nullptr) override;
   bool getDomainInfo(const ZoneName& domain, DomainInfo& info, bool getSerial = true) override;
   void getAllDomains(vector<DomainInfo>* domains, bool getSerial, bool include_disabled) override;
+  bool getDomainById(domainid_t domainId, DomainInfo& info) override;
 
   // dnssec support
   bool getAllDomainMetadata(const ZoneName& name, std::map<std::string, std::vector<std::string>>& meta) override;

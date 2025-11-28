@@ -978,6 +978,23 @@ void GeoIPBackend::getAllDomains(vector<DomainInfo>* domains, bool /* getSerial 
   }
 }
 
+bool GeoIPBackend::getDomainById(domainid_t domainId, DomainInfo& info)
+{
+  ReadLock rl(&s_state_lock);
+
+  for (const auto& dom : s_domains) {
+    if (dom.id == domainId) {
+      info.id = dom.id;
+      info.zone = dom.domain;
+      info.kind = DomainInfo::Native;
+      info.backend = this;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool GeoIPBackend::getAllDomainMetadata(const ZoneName& name, std::map<std::string, std::vector<std::string>>& meta)
 {
   if (!d_dnssec)

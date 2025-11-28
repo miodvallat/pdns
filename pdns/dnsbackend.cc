@@ -379,6 +379,21 @@ void DNSBackend::getAllDomains(vector<DomainInfo>* /* domains */, bool /* getSer
   }
 }
 
+bool DNSBackend::getDomainById(domainid_t domainId, DomainInfo& info)
+{
+  // This default implementation is suboptimal, especially if there are
+  // many domains in your backend.
+  vector<DomainInfo> domains;
+  getAllDomains(&domains, false, true);
+  for (const auto& domain : domains) {
+    if (domain.id == domainId) {
+      info = domain;
+      return true;
+    }
+  }
+  return false;
+}
+
 void fillSOAData(const DNSZoneRecord& inZoneRecord, SOAData& soaData)
 {
   soaData.domain_id = inZoneRecord.domain_id;

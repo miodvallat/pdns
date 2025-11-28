@@ -226,6 +226,7 @@ public:
   }
 
   virtual void getAllDomains(vector<DomainInfo>* domains, bool getSerial, bool include_disabled);
+  virtual bool getDomainById(domainid_t domainId, DomainInfo& info);
 
   /** Determines if we are authoritative for a zone, and at what level */
   virtual bool getAuth(const ZoneName& target, SOAData* /* sd */);

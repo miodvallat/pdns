@@ -1817,6 +1817,72 @@ bool GSQLBackend::deleteDomain(const ZoneName &domain)
   return true;
 }
 
+bool GSQLBackend::extractDomain(SSqlStatement::row_t& row, DomainInfo& info, bool getSerial)
+{
+  pdns::checked_stoi_into(info.id, row[0]);
+  try {
+    info.zone = ZoneName(row[1]);
+    if (!row[8].empty()) {
+      info.catalog = ZoneName(row[8]);
+    }
+  } catch (...) {
+    return false;
+  }
+
+  if (pdns_iequals(row[3], "MASTER")) {
+    info.kind = DomainInfo::Primary;
+  } else if (pdns_iequals(row[3], "SLAVE")) {
+    info.kind = DomainInfo::Secondary;
+  } else if (pdns_iequals(row[3], "NATIVE")) {
+    info.kind = DomainInfo::Native;
+  }
+  else if (pdns_iequals(row[3], "PRODUCER")) {
+    info.kind = DomainInfo::Producer;
+  }
+  else if (pdns_iequals(row[3], "CONSUMER")) {
+    info.kind = DomainInfo::Consumer;
+  }
+  else {
+    g_log<<Logger::Warning<<"Could not parse domain kind '"<<row[3]<<"' as one of 'MASTER', 'SLAVE' or 'NATIVE'. Setting zone kind to 'NATIVE'"<<endl;
+    info.kind = DomainInfo::Native;
+  }
+
+  if (!row[4].empty()) {
+    vector<string> primaries;
+    stringtok(primaries, row[4], " ,\t");
+    for (const auto& m : primaries) {
+      try {
+        info.primaries.emplace_back(m, 53);
+      } catch(const PDNSException &e) {
+        g_log << Logger::Warning << "Could not parse primary address (" << m << ") for zone '" << info.zone << "': " << e.reason;
+      }
+    }
+  }
+
+  if (getSerial && !row[2].empty()) {
+    SOAData sd;
+    try {
+      fillSOAData(row[2], sd);
+      info.serial = sd.serial;
+    }
+    catch (...) {
+      info.serial = 0;
+    }
+  }
+
+  try {
+    pdns::checked_stoi_into(info.notified_serial, row[5]);
+    pdns::checked_stoi_into(info.last_check, row[6]);
+  } catch(...) {
+    return false;
+  }
+
+  info.account = row[7];
+
+  info.backend = this;
+  return true;
+}
+
 void GSQLBackend::getAllDomains(vector<DomainInfo>* domains, bool getSerial, bool include_disabled)
 {
   DLOG(g_log<<"GSQLBackend retrieving all domains."<<endl);
@@ -1834,70 +1900,10 @@ void GSQLBackend::getAllDomains(vector<DomainInfo>* domains, bool getSerial, boo
     while (d_getAllDomainsQuery_stmt->hasNextRow()) {
       d_getAllDomainsQuery_stmt->nextRow(row);
       ASSERT_ROW_COLUMNS("get-all-domains-query", row, 9);
-      DomainInfo di;
-      pdns::checked_stoi_into(di.id, row[0]);
-      try {
-        di.zone = ZoneName(row[1]);
-        if (!row[8].empty()) {
-          di.catalog = ZoneName(row[8]);
-        }
-      } catch (...) {
-        continue;
+      DomainInfo info;
+      if (extractDomain(row, info, getSerial)) {
+        domains->push_back(info);
       }
-
-      if (pdns_iequals(row[3], "MASTER")) {
-        di.kind = DomainInfo::Primary;
-      } else if (pdns_iequals(row[3], "SLAVE")) {
-        di.kind = DomainInfo::Secondary;
-      } else if (pdns_iequals(row[3], "NATIVE")) {
-        di.kind = DomainInfo::Native;
-      }
-      else if (pdns_iequals(row[3], "PRODUCER")) {
-        di.kind = DomainInfo::Producer;
-      }
-      else if (pdns_iequals(row[3], "CONSUMER")) {
-        di.kind = DomainInfo::Consumer;
-      }
-      else {
-        g_log<<Logger::Warning<<"Could not parse domain kind '"<<row[3]<<"' as one of 'MASTER', 'SLAVE' or 'NATIVE'. Setting zone kind to 'NATIVE'"<<endl;
-        di.kind = DomainInfo::Native;
-      }
-
-      if (!row[4].empty()) {
-        vector<string> primaries;
-        stringtok(primaries, row[4], " ,\t");
-        for (const auto& m : primaries) {
-          try {
-            di.primaries.emplace_back(m, 53);
-          } catch(const PDNSException &e) {
-            g_log << Logger::Warning << "Could not parse primary address (" << m << ") for zone '" << di.zone << "': " << e.reason;
-          }
-        }
-      }
-
-      if (getSerial && !row[2].empty()) {
-        SOAData sd;
-        try {
-          fillSOAData(row[2], sd);
-          di.serial = sd.serial;
-        }
-        catch (...) {
-          di.serial = 0;
-        }
-      }
-
-      try {
-        pdns::checked_stoi_into(di.notified_serial, row[5]);
-        pdns::checked_stoi_into(di.last_check, row[6]);
-      } catch(...) {
-        continue;
-      }
-
-      di.account = row[7];
-
-      di.backend = this;
-
-      domains->push_back(di);
     }
     d_getAllDomainsQuery_stmt->reset();
   }

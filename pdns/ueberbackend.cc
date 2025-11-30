@@ -103,9 +103,7 @@ bool UeberBackend::loadModules(const vector<string>& modules, const string& path
 
 void UeberBackend::go()
 {
-  if (::arg().mustDo("consistent-backends")) {
-    s_doANYLookupsOnly = true;
-  }
+  s_doANYLookupsOnly = ::arg().mustDo("consistent-backends");
 
   S.declare("backend-queries", "Number of queries sent to the backend(s)");
   s_backendQueries = S.getPointer("backend-queries");
@@ -807,7 +805,14 @@ void UeberBackend::lookup(const QType& qtype, const DNSName& qname, domainid_t z
   d_qtype = qtype.getCode();
 
   d_handle.i = 0;
-  d_handle.qtype = s_doANYLookupsOnly ? QType::ANY : qtype;
+  // The consistent-backends setting only matters if more than one backend
+  // are configured.
+  if (s_doANYLookupsOnly && backends.size() > 1) {
+    d_handle.qtype = QType::ANY;
+  }
+  else {
+    d_handle.qtype = qtype;
+  }
   d_handle.qname = qname;
   d_handle.zoneId = zoneId;
   d_handle.pkt_p = pkt_p;

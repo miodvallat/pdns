@@ -68,8 +68,14 @@ void checkRRSet(const vector<DNSResourceRecord>& oldrrs, vector<DNSResourceRecor
          return std::tie(rec_a.qname, rec_a.qtype, rec_a.content) < std::tie(rec_b.qname, rec_b.qtype, rec_b.content);
        });
 
+#ifdef HAVE_LUA_RECORDS
+  bool seenLua{false};
+#endif
   DNSResourceRecord previous;
   for (const auto& rec : allrrs) {
+#ifdef HAVE_LUA_RECORDS
+    seenLua |= rec.qtype == QType::LUA;
+#endif
     if (previous.qname == rec.qname) {
       if (previous.qtype == rec.qtype) {
         if (onlyOneEntryTypes.count(rec.qtype.getCode()) != 0) {
@@ -82,7 +88,7 @@ void checkRRSet(const vector<DNSResourceRecord>& oldrrs, vector<DNSResourceRecor
         // if required. This is optional because some callers are able to
         // compute allrrs in a way which already enforces this, and therefore
         // it is useless to check a second time.
-        if ((flags & RRSET_CHECK_TTL) != 0) {
+        if ((flags & RRSET_CHECK_TTL) != 0 && rec.qtype != QType::LUA) {
           if (rec.ttl != previous.ttl) {
             // This error message may be misleading if a TTL discrepancy already
             // exists in the RRset, as it might blame an existing record rather
@@ -130,6 +136,39 @@ void checkRRSet(const vector<DNSResourceRecord>& oldrrs, vector<DNSResourceRecor
 
     previous = rec;
   }
+#ifdef HAVE_LUA_RECORDS
+  // If there were Lua records, and TTL checks were requested, we need to
+  // check again, parsing the Lua records to know which QType they are
+  // expected to return.
+  if (seenLua) {
+    if ((flags & RRSET_CHECK_TTL) != 0) {
+      for (const auto& rec : allrrs) {
+        if (rec.qtype != QType::LUA) {
+          continue;
+        }
+        shared_ptr<DNSRecordContent> drc(DNSRecordContent::make(rec.qtype.getCode(), QClass::IN, rec.content));
+        auto luaRec = std::dynamic_pointer_cast<LUARecordContent>(drc);
+        if (!luaRec) {
+          continue; // warn?
+        }
+        // Now check the TTL of the RRset matching the returned type and
+        // confirm TTL values match. Note that this is of quadratic complexity.
+        for (const auto& rec2 : allrrs) {
+          if (rec2.qname != rec.qname) {
+            continue;
+          }
+          if (rec2.qtype != luaRec->d_type) {
+            continue;
+          }
+          if (rec2.ttl != rec.ttl) {
+            errors.emplace_back(std::make_pair(rec, std::string{"uses a different TTL value than the remainder of the RRset"}));
+          }
+          break;
+        }
+      }
+    }
+  }
+#endif
 }
 
 } // namespace Check

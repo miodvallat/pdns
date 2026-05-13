@@ -403,16 +403,21 @@ void TCPNameserver::doConnection(int fd, Logr::log_t slog)
         }
       }
 
+      bool logAtNewline{false};
       if (PC.enabled()) {
         if (packet->couldBeCached()) {
           std::string view{};
           if (g_views) {
+            if (!g_slogStructured) {
+              g_log << endl;
+              logAtNewline = true; // because of getViewFromNetwork below
+            }
             Netmask netmask(packet->d_remote);
             view = g_zoneCache.getViewFromNetwork(&netmask);
           }
           if (PC.get(*packet, *cached, view)) { // short circuit - does the PacketCache recognize this question?
             if(g_logDNSQueries) {
-              SLOG(g_log<<": packetcache HIT"<<endl,
+              SLOG(g_log << (logAtNewline ? "" : ": ") << "packetcache HIT"<<endl,
                    slogger->info(Logr::Notice, "Received TCP query", "packetcache", Logging::Loggable("hit")));
             }
             cached->setRemote(&packet->d_remote);
@@ -426,7 +431,7 @@ void TCPNameserver::doConnection(int fd, Logr::log_t slog)
           }
         }
         if(g_logDNSQueries) {
-          SLOG(g_log<<": packetcache MISS"<<endl,
+          SLOG(g_log<< (logAtNewline ? "" : ": ") << "packetcache MISS"<<endl,
                slogger->info(Logr::Notice, "Received TCP query", "packetcache", Logging::Loggable("miss")));
         }
       } else {

@@ -241,6 +241,81 @@ size_t parseRFC1035CharString(std::string_view in, std::string &val) {
   return counter;
 }
 
+// Similar to above, but allows ( ) ; within quoted parts.
+size_t parseRFC1035CharStringRelaxed(std::string_view in, std::string &val) {
+
+  val.clear();
+  val.reserve(in.size());
+  const char *p = in.data();
+  const char *pe = p + in.size();
+  int cs = 0;
+  uint8_t escaped_octet = 0;
+  // Keeps track of how many chars we read from the source string
+  size_t counter=0;
+
+/* This parses an RFC 1035 char-string.
+ * It was created from the ABNF in draft-ietf-dnsop-svcb-https-02 with
+ * https://github.com/zinid/abnfc and modified to put all the characters in the
+ * right place.
+ */
+%%{
+# Due to a shared namespace in Ragel output, most of this matches the
+# parseRFC1035CharString declarations, but with a _r trailing suffix to
+# guarantee unicity.
+  machine dns_text_to_string_r;
+
+  action doEscapedNumber_r {
+    escaped_octet *= 10;
+    escaped_octet += fc-'0';
+    counter++;
+  }
+
+  action doneEscapedNumber_r {
+    val += escaped_octet;
+    escaped_octet = 0;
+  }
+
+  action addToVal_r {
+    val += fc;
+    counter++;
+  }
+
+  action incrementCounter_r {
+    counter++;
+  }
+
+  # generated rules, define required actions
+  DIGIT_r = 0x30..0x39;
+  DQUOTE_r = "\"";
+  HTAB_r = "\t";
+  SP_r = " ";
+  WSP_r = (SP_r | HTAB_r)@addToVal_r;
+  non_special_r = "!" | 0x23..0x27 | 0x2a..0x3a | 0x3c..0x5b | 0x5d..0x7e;
+  special_r = 0x28..0x29 | 0x3b;
+  non_digit_r = 0x21..0x2f | 0x3a..0x7e;
+  dec_octet_r = ( ( "0" | "1" ) DIGIT_r{2} ) | ( "2" ( ( 0x30..0x34 DIGIT_r ) | ( "5" 0x30..0x35 ) ) );
+  escaped_r = '\\'@incrementCounter_r ( non_digit_r$addToVal_r | dec_octet_r$doEscapedNumber_r@doneEscapedNumber_r );
+  contiguous_r = ( non_special_r$addToVal_r | escaped_r )+;
+  # rules differ from parseRFC1035CharString starting from here
+  quotedcontiguous_r = ( non_special_r$addToVal_r | special_r$addToVal_r | escaped_r )+;
+  quoted_r = DQUOTE_r@incrementCounter_r ( quotedcontiguous_r | ( '\\'? WSP_r ) )* DQUOTE_r@incrementCounter_r;
+  char_string_r = (contiguous_r | quoted_r);
+
+  # instantiate machine rules
+  main := char_string_r;
+  write data;
+  write init;
+}%%
+
+  // silence warnings
+  (void) dns_text_to_string_r_first_final;
+  (void) dns_text_to_string_r_error;
+  (void) dns_text_to_string_r_en_main;
+  %% write exec;
+
+  return counter;
+}
+
 size_t parseSVCBValueListFromParsedRFC1035CharString(const std::string &in, std::vector<std::string> &val) {
   val.clear();
   const char *p = in.c_str();

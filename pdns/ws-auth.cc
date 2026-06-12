@@ -2491,7 +2491,8 @@ enum changeType
   DELETE, // delete complete RRset
   REPLACE, // replace complete RRset
   PRUNE, // remove single record from RRset if found
-  EXTEND // add single record to RRset if not found
+  EXTEND, // add single record to RRset if not found
+  ALWAYSEXTEND, // add single record to RRset if not found, and always rewrite the RRset
 };
 
 // Validate the "changetype" field of a Json patch record.
@@ -2510,6 +2511,9 @@ static changeType validateChangeType(const std::string& changetype)
   }
   if (changetype == "EXTEND") {
     return EXTEND;
+  }
+  if (changetype == "ALWAYSEXTEND") {
+    return ALWAYSEXTEND;
   }
   throw ApiException("Changetype '" + changetype + "' is not a valid value");
 }
@@ -2667,11 +2671,11 @@ static applyResult applyReplace(const DomainInfo& domainInfo, const ZoneName& zo
   return SUCCESS;
 }
 
-// Apply a PRUNE or EXTEND changetype.
+// Apply a PRUNE, EXTEND or ALWAYSEXTEND changetype.
 static applyResult applyPruneOrExtend(const DomainInfo& domainInfo, const ZoneName& zonename, const Json& container, DNSName& qname, QType& qtype, bool allowUnderscores, soaEditSettings& soa, HttpResponse* resp, changeType operationType, std::vector<DNSResourceRecord>& rrset)
 {
   if (!container["records"].is_array()) {
-    throw ApiException("No record provided for PRUNE or EXTEND operation");
+    throw ApiException("No record provided for PRUNE, EXTEND or ALWAYSEXTEND operation");
   }
 
   try {
@@ -2679,7 +2683,7 @@ static applyResult applyPruneOrExtend(const DomainInfo& domainInfo, const ZoneNa
     uint32_t ttl = uintFromJson(container, "ttl");
     gatherRecords(container, qname, qtype, ttl, new_records);
     if (new_records.size() != 1) {
-      throw ApiException("Exactly one record should be provided for PRUNE or EXTEND operation");
+      throw ApiException("Exactly one record should be provided for PRUNE, EXTEND or ALWAYSEXTEND operation");
     }
 
     auto& new_record = new_records.front();
@@ -2703,10 +2707,15 @@ static applyResult applyPruneOrExtend(const DomainInfo& domainInfo, const ZoneNa
       }
     }
     // Add new record to RRset if not found.
-    if (operationType == EXTEND && !seenRecord) {
+    if (operationType != PRUNE && !seenRecord) {
       rrset.emplace_back(new_record);
     }
-    bool submitChanges = (operationType == EXTEND && !seenRecord) || (operationType == PRUNE && seenRecord);
+    // clang-format off
+    bool submitChanges =
+      operationType == ALWAYSEXTEND ||
+      (operationType == EXTEND && !seenRecord) ||
+      (operationType == PRUNE && seenRecord);
+    // clang-format on
     if (!submitChanges) {
       return NOP;
     }
@@ -2741,7 +2750,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
     domainInfo.backend->getDomainMetadataOne(zonename, "SOA-EDIT", soa.edit_kind);
     bool allowUnderscores = areUnderscoresAllowed(zonename, *domainInfo.backend);
 
-    // For PRUNE and EXTEND operations, we are not being passed the complete
+    // For PRUNE and *EXTEND operations, we are not being passed the complete
     // RRset, and will need to fetch it from the backend. But we may have
     // processed a DELETE or REPLACE operation for the same RRset first, in
     // which case we can't assume querying the backend will be consistent with
@@ -2750,7 +2759,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
     // To be sure to work on consistent contents, without having to rely upon
     // specific backend behaviour, we will need to cache the RRset values
     // in this routine, but we only need to do that for RRset which are
-    // subject to both PRUNE/EXTEND and DELETE/REPLACE operation.
+    // subject to both PRUNE/*EXTEND and DELETE/REPLACE operation.
     // That first pass over the change requests computes this (and also
     // performs basic validation).
     using key = std::pair<DNSName, QType>;
@@ -2782,7 +2791,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
       if (auto iter = changes.find(currentKey); iter != changes.end()) {
         auto operations = iter->second;
         // Only allow one DELETE or REPLACE operation per RRset. On the other
-        // hand, it makes sense to allow multiple PRUNE or EXTEND, since the
+        // hand, it makes sense to allow multiple PRUNE or *EXTEND, since the
         // individual records they'll concern might differ.
         if (operationType == DELETE || operationType == REPLACE) {
           if ((operations & newOperation) != 0) {
@@ -2797,7 +2806,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
     }
 
     // In this second pass, we will process the changes and maintain a cache
-    // of the RRset subject to PRUNE/EXTEND operations.
+    // of the RRset subject to PRUNE/*EXTEND operations.
     std::map<key, std::vector<DNSResourceRecord>> cache;
     for (const auto& container : rrsets) {
       string changetype = toUpper(stringFromJson(container, "changetype"));
@@ -2810,7 +2819,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
       bool cacheNeeded{false};
       if (auto iter = changes.find(currentKey); iter != changes.end()) {
         auto operations = iter->second;
-        cacheNeeded = (operations & ((1U << PRUNE) | (1U << EXTEND))) != 0;
+        cacheNeeded = (operations & ((1U << PRUNE) | (1U << EXTEND) | (1U << ALWAYSEXTEND))) != 0;
       }
 
       applyResult result{ABORT};
@@ -2824,6 +2833,7 @@ static void patchZone(UeberBackend& backend, const ZoneName& zonename, DomainInf
         break;
       case PRUNE:
       case EXTEND:
+      case ALWAYSEXTEND:
         // First, obtain the current RRset, either from the backend or from
         // our local cache if we already did some operations.
         if (const auto iter = cache.find(currentKey); iter != cache.end()) {

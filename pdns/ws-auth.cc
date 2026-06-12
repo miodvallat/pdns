@@ -2485,6 +2485,29 @@ static void apiServerZoneRectify(HttpRequest* req, HttpResponse* resp)
   resp->setSuccessResult("Rectified");
 }
 
+static void apiServerZoneRecordCount(HttpRequest* req, HttpResponse* resp)
+{
+  ZoneData zoneData{req};
+  size_t recordCount{0};
+
+  zoneData.domainInfo.backend->list(zoneData.zoneName, static_cast<int>(zoneData.domainInfo.id));
+  DNSResourceRecord resourceRecord;
+  while (zoneData.domainInfo.backend->get(resourceRecord)) {
+    if (resourceRecord.qtype.getCode() == QType::ENT) {
+      continue; // skip empty non-terminals
+    }
+    ++recordCount;
+  }
+
+  if (req->accept_json) {
+    resp->setJsonBody(Json::object{{"size", static_cast<double>(recordCount)}});
+  }
+  else {
+    resp->headers["Content-Type"] = "text/plain; charset=us-ascii";
+    resp->body = std::to_string(recordCount);
+  }
+}
+
 // The allowed values for the "changetype" field of a Json patch record.
 enum changeType
 {
@@ -3357,6 +3380,7 @@ void AuthWebServer::webThread(Logr::log_t slog)
       d_ws->registerApiHandler("/api/v1/servers/localhost/zones/<id>/metadata", apiZoneMetadataPOST, "POST");
       d_ws->registerApiHandler("/api/v1/servers/localhost/zones/<id>/notify", apiServerZoneNotify, "PUT");
       d_ws->registerApiHandler("/api/v1/servers/localhost/zones/<id>/rectify", apiServerZoneRectify, "PUT");
+      d_ws->registerApiHandler("/api/v1/servers/localhost/zones/<id>/size", apiServerZoneRecordCount, "GET");
       d_ws->registerApiHandler("/api/v1/servers/localhost/zones/<id>", apiServerZoneDetailGET, "GET");
       d_ws->registerApiHandler("/api/v1/servers/localhost/zones/<id>", apiServerZoneDetailPATCH, "PATCH");
       d_ws->registerApiHandler("/api/v1/servers/localhost/zones/<id>", apiServerZoneDetailPUT, "PUT");

@@ -7,7 +7,7 @@ Zone Endpoints
 --------------
 
 .. openapi:: openapi/authoritative-api-openapi.yaml
-  :paths: /servers/{server_id}/zones /servers/{server_id}/zones/{zone_id} /servers/{server_id}/zones/{zone_id}/axfr-retrieve /servers/{server_id}/zones/{zone_id}/notify /servers/{server_id}/zones/{zone_id}/export /servers/{server_id}/zones/{zone_id}/rectify
+  :paths: /servers/{server_id}/zones /servers/{server_id}/zones/{zone_id} /servers/{server_id}/zones/{zone_id}/axfr-retrieve /servers/{server_id}/zones/{zone_id}/notify /servers/{server_id}/zones/{zone_id}/export /servers/{server_id}/zones/{zone_id}/rectify /servers/{server_id}/zones/{zone_id}/size
   :examples:
 
 Objects

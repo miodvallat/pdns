@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  version: "0.0.18"
+  version: "0.0.19"
   title: PowerDNS Authoritative HTTP API
   license:
     name: MIT
@@ -936,6 +936,25 @@ paths:
       summary: "Rectify the zone data."
       description: "This does not take into account the API-RECTIFY metadata. Fails on slave zones and zones that do not have DNSSEC."
       operationId: rectifyZone
+      tags:
+        - zones
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/Error"
+
+  "/servers/{server_id}/zones/{zone_id}/size":
+    parameters:
+      - $ref: "#/components/parameters/server_id"
+      - $ref: "#/components/parameters/zone_id"
+    get:
+      summary: "Returns the number of records in the zone."
+      operationId: zoneRecordCount
       tags:
         - zones
       responses:

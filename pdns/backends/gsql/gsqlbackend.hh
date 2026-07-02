@@ -151,6 +151,7 @@ protected:
   DNSName d_qname;
   SSqlStatement::result_t d_result;
   unique_ptr<SSqlStatement>* d_query_stmt;
+  std::string d_like_escape; // will be overridden by derived classes
 
 private:
   string d_NoIdQuery;

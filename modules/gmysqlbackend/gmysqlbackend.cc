@@ -43,6 +43,8 @@ gMySQLBackend::gMySQLBackend(const string& mode, const string& suffix) :
     d_slog = g_slog->withName("gmysql" + suffix);
   }
 
+  d_like_escape = "\\";
+
   try {
     // Explicit call rather than virtual method call, to silence clang-tidy
     gMySQLBackend::reconnect();
@@ -106,7 +108,7 @@ public:
     declare(suffix, "api-any-id-query", "API any with ID query", record_query + " (disabled=0 or ?) and name=? and domain_id=?");
 
     declare(suffix, "list-query", "AXFR query", "SELECT content,ttl,prio,type,domain_id,disabled,name,auth,ordername FROM records WHERE (disabled=0 OR ?) and domain_id=? order by name, type");
-    declare(suffix, "list-subzone-query", "Subzone listing", record_query + " disabled=0 and (name=? OR name like ?) and domain_id=?");
+    declare(suffix, "list-subzone-query", "Subzone listing", record_query + " disabled=0 and (name=? OR name like ? escape ?) and domain_id=?");
 
     declare(suffix, "remove-empty-non-terminals-from-zone-query", "remove all empty non-terminals from zone", "delete from records where domain_id=? and type is null");
     declare(suffix, "delete-empty-non-terminal-query", "delete empty non-terminal from zone", "delete from records where domain_id=? and name=? and type is null");

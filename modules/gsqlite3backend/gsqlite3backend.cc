@@ -46,6 +46,8 @@ gSQLite3Backend::gSQLite3Backend(const std::string& mode, const std::string& suf
     d_slog = g_slog->withName("gsqlite3" + suffix);
   }
 
+  d_like_escape = "\\";
+
   try {
     auto ptr = std::unique_ptr<SSql>(new SSQLite3(d_slog, getArg("database"), getArg("pragma-journal-mode")));
     if (!getArg("pragma-synchronous").empty()) {
@@ -98,7 +100,7 @@ public:
     declare(suffix, "api-any-id-query", "API any with ID query", record_query + " (disabled=0 or :include_disabled) and name=:qname and domain_id=:domain_id");
 
     declare(suffix, "list-query", "AXFR query", "SELECT content,ttl,prio,type,domain_id,disabled,name,auth,ordername FROM records WHERE (disabled=0 OR :include_disabled) and domain_id=:domain_id order by name, type");
-    declare(suffix, "list-subzone-query", "Subzone listing", record_query + " disabled=0 and (name=:zone OR name like :wildzone) and domain_id=:domain_id");
+    declare(suffix, "list-subzone-query", "Subzone listing", record_query + " disabled=0 and (name=:zone OR name like :wildzone escape :escape) and domain_id=:domain_id");
 
     declare(suffix, "remove-empty-non-terminals-from-zone-query", "remove all empty non-terminals from zone", "delete from records where domain_id=:domain_id and type is null");
     declare(suffix, "delete-empty-non-terminal-query", "delete empty non-terminal from zone", "delete from records where domain_id=:domain_id and name=:qname and type is null");

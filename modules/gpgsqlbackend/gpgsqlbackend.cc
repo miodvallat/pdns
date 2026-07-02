@@ -43,6 +43,8 @@ gPgSQLBackend::gPgSQLBackend(const string& mode, const string& suffix) :
     d_slog = g_slog->withName("gpgsql" + suffix);
   }
 
+  d_like_escape = "\\";
+
   try {
     setDB(std::unique_ptr<SSql>(new SPgSQL(d_slog,
                                            getArg("dbname"),
@@ -113,7 +115,7 @@ public:
     declare(suffix, "api-any-id-query", "API any with ID query", record_query + " (disabled=false or $1) and name=$2 and domain_id=$3");
 
     declare(suffix, "list-query", "AXFR query", "SELECT content,ttl,prio,type,domain_id,disabled::int,name,auth::int,ordername FROM records WHERE (disabled=false OR $1) and domain_id=$2 order by name, type");
-    declare(suffix, "list-subzone-query", "Subzone listing", record_query + " disabled=false and (name=$1 OR name like $2) and domain_id=$3");
+    declare(suffix, "list-subzone-query", "Subzone listing", record_query + " disabled=false and (name=$1 OR name like $2 escape $3) and domain_id=$4");
 
     declare(suffix, "remove-empty-non-terminals-from-zone-query", "remove all empty non-terminals from zone", "delete from records where domain_id=$1 and type is null");
     declare(suffix, "delete-empty-non-terminal-query", "delete empty non-terminal from zone", "delete from records where domain_id=$1 and name=$2 and type is null");

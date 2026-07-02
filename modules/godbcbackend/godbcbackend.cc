@@ -41,6 +41,11 @@ gODBCBackend::gODBCBackend(const std::string& mode, const std::string& suffix) :
     d_slog = g_slog->withName("godbc" + suffix);
   }
 
+  // ESCAPE support in LIKE constructs may not be available. The documentation
+  // suggests checking this at runtime using SQLGetInfo(SQL_LIKE_ESCAPE_CLAUSE),
+  // and if successful we could set d_like_escape_substmt to "{escape '\\'}".
+  d_like_escape.clear();
+
   try {
     setDB(std::unique_ptr<SSql>(new SODBC(d_slog, getArg("datasource"), getArg("username"), getArg("password"))));
   }

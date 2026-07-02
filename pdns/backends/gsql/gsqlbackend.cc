@@ -218,7 +218,7 @@ void GSQLBackend::allocateStatements()
     d_APIIdQuery_stmt = d_db->prepare(d_APIIdQuery, 4);
     d_APIANYIdQuery_stmt = d_db->prepare(d_APIANYIdQuery, 3);
     d_listQuery_stmt = d_db->prepare(d_listQuery, 2);
-    d_listSubZoneQuery_stmt = d_db->prepare(d_listSubZoneQuery, 3);
+    d_listSubZoneQuery_stmt = d_db->prepare(d_listSubZoneQuery, d_like_escape.empty() ? 3 : 4);
     d_PrimaryOfDomainsZoneQuery_stmt = d_db->prepare(d_PrimaryOfDomainsZoneQuery, 1);
     d_InfoOfDomainsZoneQuery_stmt = d_db->prepare(d_InfoOfDomainsZoneQuery, 1);
     d_InfoOfAllSecondaryDomainsQuery_stmt = d_db->prepare(d_InfoOfAllSecondaryDomainsQuery, 0);
@@ -1720,22 +1720,48 @@ bool GSQLBackend::list(const ZoneName &target, domainid_t domain_id, bool includ
   return true;
 }
 
-bool GSQLBackend::listSubZone(const ZoneName &zone, domainid_t domain_id) {
+static string likePattern2SQLPattern(const string &pattern)
+{
+  string escaped_pattern = boost::replace_all_copy(pattern,"\\","\\\\");
+  boost::replace_all(escaped_pattern,"_","\\_");
+  boost::replace_all(escaped_pattern,"%","\\%");
+  return escaped_pattern;
+}
 
-  string wildzone = "%." + zone.makeLowerCase().toStringNoDot();
+bool GSQLBackend::listSubZone(const ZoneName &zone, domainid_t domain_id)
+{
+  string plainzone = zone.makeLowerCase().toStringNoDot();
+  // If the "like" clause of the query supports escaping, make sure to escape
+  // % and _ occurring in the zone name.
+  if (!d_like_escape.empty()) {
+    plainzone = likePattern2SQLPattern(plainzone);
+  }
+  string wildzone = "%." + plainzone;
 
   try {
     reconnectIfNeeded();
 
     d_query_name = "list-subzone-query";
     d_query_stmt = &d_listSubZoneQuery_stmt;
-    // clang-format off
-    (*d_query_stmt)->
-      bind("zone", zone)->
-      bind("wildzone", wildzone)->
-      bind("domain_id", domain_id)->
-      execute();
-    // clang-format on
+    if (d_like_escape.empty()) {
+      // clang-format off
+      (*d_query_stmt)->
+        bind("zone", zone)->
+        bind("wildzone", wildzone)->
+        bind("domain_id", domain_id)->
+        execute();
+      // clang-format on
+    }
+    else {
+      // clang-format off
+      (*d_query_stmt)->
+        bind("zone", zone)->
+        bind("wildzone", wildzone)->
+        bind("escape", d_like_escape)->
+        bind("domain_id", domain_id)->
+        execute();
+      // clang-format on
+    }
   }
   catch(SSqlException &e) {
     throw PDNSException("GSQLBackend unable to list SubZones for domain '" + zone.toLogString() + "': "+e.txtReason());
@@ -2473,7 +2499,7 @@ string GSQLBackend::directBackendCmd(const string &query)
   }
 }
 
-static string pattern2SQLPattern(const string &pattern)
+static string searchPattern2SQLPattern(const string &pattern)
 {
   string escaped_pattern = boost::replace_all_copy(pattern,"\\","\\\\");
   boost::replace_all(escaped_pattern,"_","\\_");
@@ -2486,7 +2512,7 @@ static string pattern2SQLPattern(const string &pattern)
 bool GSQLBackend::searchRecords(const string &pattern, size_t maxResults, vector<DNSResourceRecord>& result)
 {
   d_qname.clear();
-  string escaped_pattern = pattern2SQLPattern(pattern);
+  string escaped_pattern = searchPattern2SQLPattern(pattern);
   try {
     reconnectIfNeeded();
 
@@ -2524,7 +2550,7 @@ bool GSQLBackend::searchRecords(const string &pattern, size_t maxResults, vector
 bool GSQLBackend::searchComments(const string &pattern, size_t maxResults, vector<Comment>& result)
 {
   Comment c;
-  string escaped_pattern = pattern2SQLPattern(pattern);
+  string escaped_pattern = searchPattern2SQLPattern(pattern);
   try {
     reconnectIfNeeded();
 

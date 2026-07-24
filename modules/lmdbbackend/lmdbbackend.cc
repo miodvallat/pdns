@@ -2481,13 +2481,15 @@ bool LMDBBackend::createDomain(const ZoneName& domain, const DomainInfo::DomainK
     info.kind = kind;
     info.primaries = primaries;
     info.account = account;
+    info.backend = this;
+    info.serial = 0;
 
-    txn.put(info, 0, d_random_ids, domain.hash());
+    info.id = txn.put(info, 0, d_random_ids, domain.hash());
     txn.commit();
     writeTransientDomainInfo(info);
   }
 
-  return getDomainInfo(domain, info);
+  return true;
 }
 
 void LMDBBackend::getAllDomainsFiltered(vector<DomainInfo>* domains, const std::function<bool(DomainInfo&)>& allow)
